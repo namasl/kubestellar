@@ -29,5 +29,5 @@ var wmwCmd = &cobra.Command{
 }
 
 func init() {
-    rootCmd.AddCommand(wmwCmd)
+    EnsureCmd.AddCommand(wmwCmd)
 }

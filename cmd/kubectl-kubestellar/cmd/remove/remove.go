@@ -19,7 +19,7 @@ import (
     "github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
+var removeCmd = &cobra.Command{
     Use:   "remove",
     Aliases: []string{"rm"},
     Short:  "Removes a KubeStellar object",

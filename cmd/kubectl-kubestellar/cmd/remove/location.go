@@ -30,5 +30,5 @@ var locationCmd = &cobra.Command{
 }
 
 func init() {
-    rootCmd.AddCommand(locationCmd)
+    removeCmd.AddCommand(locationCmd)
 }

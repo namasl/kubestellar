@@ -22,6 +22,8 @@ import (
 
 //	"k8s.io/cli-runtime/pkg/genericclioptions"
 //	"k8s.io/klog/v2"
+
+	"github.com/kubestellar/kubestellar/cmd/kubectl-kubestellar/cmd/ensure"
 )
 
 var rootCmd = &cobra.Command{
@@ -30,8 +32,10 @@ var rootCmd = &cobra.Command{
 	Long: `KubeStellar is a flexible solution for challenges associated with multi-cluster 
 configuration management for edge, multi-cloud, and hybrid cloud.
 This command provides the kubestellar sub-command for kubectl.`,
-//	SilenceUsage: true, // print usage when there is an error
-//	SilenceErrors: true,
+	SilenceErrors: false, // print errors
+	SilenceUsage: false, // print usage when there is an error
+	// This root command is not executable, and requires a sub-command. Thus,
+	// there is no "Run" or "RunE" value.
 }
 
 /*func init() {
@@ -53,6 +57,9 @@ func Execute() {
 	os.Exit(2)
 }
 
+func init() {
+    rootCmd.AddCommand(ensure.EnsureCmd)
+}
 
 /*
 func NewKubestellarCommand() *cobra.Command {
