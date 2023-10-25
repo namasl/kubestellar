@@ -17,17 +17,24 @@ package remove
 
 import (
     "fmt"
+    "errors"
 
     "github.com/spf13/cobra"
 )
 
 var RemoveCmd = &cobra.Command{
-    Use:   "remove",
+    Use:    "remove",
     Aliases: []string{"rm"},
     Short:  "Remove a KubeStellar object",
-    Args:  cobra.ExactArgs(1),
-    Run: func(cmd *cobra.Command, args []string) {
-        fmt.Println("REMOVE")
+//    Args:  cobra.ExactArgs(1),
+    // If an invalid sub-command is sent, the function in RunE will execute.
+    // Use this to inform of invalid arguments, and return an error.
+    RunE: func(cmd *cobra.Command, args []string) error {
+        if len(args) > 0 {
+            return errors.New(fmt.Sprintf("Invalid sub-command for 'remove': %s\n", args[0]))
+        } else {
+            return errors.New(fmt.Sprintf("Missing sub-command for 'remove'\n"))
+        }
     },
 }
 

@@ -23,7 +23,8 @@ var wmwCmd = &cobra.Command{
     Use:   "wmw",
     Short:  "Removes a KubeStellar WMW object",
     Args:  cobra.ExactArgs(1),
-    Run: func(cmd *cobra.Command, args []string) {
+    RunE: func(cmd *cobra.Command, args []string) error {
         fmt.Println("WMW")
+        return nil
     },
 }

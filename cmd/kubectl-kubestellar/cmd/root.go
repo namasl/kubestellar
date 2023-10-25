@@ -19,7 +19,7 @@ package cmd
 import (
 	"fmt"
 	"os"
-//	"flag"
+	"errors"
 
 	"github.com/spf13/cobra"
 
@@ -30,16 +30,28 @@ import (
 	"github.com/kubestellar/kubestellar/cmd/kubectl-kubestellar/cmd/remove"
 )
 
+// root kubestellar command
 var rootCmd = &cobra.Command{
-	// This root command is not executable, and requires a sub-command. Thus,
-	// there is no "Run" or "RunE" value.
-	Use:   "kubestellar",
-	Short: "KubeStellar plugin for kubectl",
-	Long: `KubeStellar is a flexible solution for challenges associated with multi-cluster 
+	Use:	"kubestellar",
+	Short:	"KubeStellar plugin for kubectl",
+	Long:	`KubeStellar is a flexible solution for challenges associated with multi-cluster 
 configuration management for edge, multi-cloud, and hybrid cloud.
 This command provides the kubestellar sub-command for kubectl.`,
-//	SilenceErrors: false, // print errors
-//	SilenceUsage: false, // print usage when there is an error
+	// TODO: without specifying this, when no args are present the help does
+    // not get printed after the error.
+    Args:  cobra.ExactArgs(1),
+    // If an invalid sub-command is sent, the function in RunE will execute.
+    // Use this to inform of invalid arguments, and return an error.
+    RunE: func(cmd *cobra.Command, args []string) error {
+        if len(args) > 0 {
+            return errors.New(fmt.Sprintf("Invalid kubestellar sub-command: %s\n", args[0]))
+        } else {
+			// TODO: The help does not get printed after this message. If
+			// specifying  "Args: cobra.ExactArgs(1)" then the help does get
+			// printed, but this line will never run.
+            return errors.New(fmt.Sprintf("Missing kubestellar sub-command\n"))
+        }
+    },
 }
 
 // add sub-commands to root
@@ -64,6 +76,6 @@ func init() {
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(10)
+		os.Exit(1)
 	}
 }
