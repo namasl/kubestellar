@@ -28,7 +28,3 @@ var locationCmd = &cobra.Command{
         fmt.Println("LOC")
     },
 }
-
-func init() {
-    removeCmd.AddCommand(locationCmd)
-}

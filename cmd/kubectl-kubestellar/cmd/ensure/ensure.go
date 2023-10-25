@@ -11,6 +11,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// This is the "ensure" sub-command for kubestellar.
+
 package ensure
 
 import (
@@ -31,4 +33,6 @@ var EnsureCmd = &cobra.Command{
 
 func init() {
     // add flags
+    EnsureCmd.AddCommand(locationCmd)
+    EnsureCmd.AddCommand(wmwCmd)
 }

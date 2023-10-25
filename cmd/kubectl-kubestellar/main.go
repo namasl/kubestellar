@@ -14,12 +14,10 @@ limitations under the License.
 package main
 
 import (
-//	"os"
-//	"fmt"
-
 	"github.com/kubestellar/kubestellar/cmd/kubectl-kubestellar/cmd"
 )
 
+// Run the root command. Error handling is done within Execute().
 func main() {
 //	command := cmd.NewKubestellarCommand()
 //	if err := command.Execute(); err != nil {

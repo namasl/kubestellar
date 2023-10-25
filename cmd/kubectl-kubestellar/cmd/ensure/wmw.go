@@ -27,7 +27,3 @@ var wmwCmd = &cobra.Command{
         fmt.Println("WMW")
     },
 }
-
-func init() {
-    EnsureCmd.AddCommand(wmwCmd)
-}

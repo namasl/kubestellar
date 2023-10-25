@@ -11,6 +11,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// This is the "remove" sub-command for kubestellar.
+
 package remove
 
 import (
@@ -19,10 +21,10 @@ import (
     "github.com/spf13/cobra"
 )
 
-var removeCmd = &cobra.Command{
+var RemoveCmd = &cobra.Command{
     Use:   "remove",
     Aliases: []string{"rm"},
-    Short:  "Removes a KubeStellar object",
+    Short:  "Remove a KubeStellar object",
     Args:  cobra.ExactArgs(1),
     Run: func(cmd *cobra.Command, args []string) {
         fmt.Println("REMOVE")
@@ -30,5 +32,7 @@ var removeCmd = &cobra.Command{
 }
 
 func init() {
+    RemoveCmd.AddCommand(locationCmd)
+    RemoveCmd.AddCommand(wmwCmd)
     // add flags
 }
