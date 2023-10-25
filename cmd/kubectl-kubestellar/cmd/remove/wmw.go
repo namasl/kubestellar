@@ -11,20 +11,45 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// sub-command for removing a workload management workspace
+
 package remove
 
 import (
     "fmt"
+    "flag"
 
     "github.com/spf13/cobra"
+    "github.com/spf13/pflag"
+
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/klog/v2"
 )
 
 var wmwCmd = &cobra.Command{
     Use:   "wmw",
-    Short:  "Removes a KubeStellar WMW object",
+    Short:  "Remove a KubeStellar workload management workspace",
     Args:  cobra.ExactArgs(1),
     RunE: func(cmd *cobra.Command, args []string) error {
         fmt.Println("WMW")
         return nil
     },
+}
+
+
+
+func init() {
+	// Make a newflag set named rmWmw
+	fs := pflag.NewFlagSet("rmWmw", pflag.ExitOnError)
+
+	klog.InitFlags(flag.CommandLine)
+	fs.AddGoFlagSet(flag.CommandLine)
+
+	// get config flags with default values
+	cliOpts := genericclioptions.NewConfigFlags(true)
+	// add cliOpts flags to fs (flow from syntax is confusing)
+	cliOpts.AddFlags(fs)
+}
+
+func removeWmw() {
 }

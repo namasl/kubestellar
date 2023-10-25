@@ -11,6 +11,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// sub-command for removing a location
+
 package remove
 
 import (
@@ -22,7 +24,7 @@ import (
 var locationCmd = &cobra.Command{
     Use:   "location",
     Aliases: []string{"loc"},
-    Short:  "Removes a KubeStellar location object",
+    Short:  "Remove a KubeStellar location object",
     Args:  cobra.ExactArgs(1),
     Run: func(cmd *cobra.Command, args []string) {
         fmt.Println("LOC")

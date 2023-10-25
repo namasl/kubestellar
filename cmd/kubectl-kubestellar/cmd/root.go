@@ -68,7 +68,7 @@ func init() {
 
 	// get config flags with default values
 	cliOpts := genericclioptions.NewConfigFlags(true)
-	// add cliOpts flags to fs (syntax is confusing)
+	// add cliOpts flags to fs (flow from syntax is confusing)
 	cliOpts.AddFlags(fs)
 */
 }
