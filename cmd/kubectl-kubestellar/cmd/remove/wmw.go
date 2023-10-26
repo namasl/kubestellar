@@ -18,38 +18,76 @@ package remove
 import (
     "fmt"
     "flag"
+//    "errors"
 
     "github.com/spf13/cobra"
     "github.com/spf13/pflag"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/klog/v2"
+//	"k8s.io/klog/v2"
+    "k8s.io/client-go/kubernetes"
 )
 
-var wmwCmd = &cobra.Command{
-    Use:   "wmw",
-    Short:  "Remove a KubeStellar workload management workspace",
-    Args:  cobra.ExactArgs(1),
-    RunE: func(cmd *cobra.Command, args []string) error {
-        fmt.Println("WMW")
-        return nil
-    },
-}
+// Create the Cobra sub-command for 'kubectl kubestellar remove wmw'
+func NewCmdRemoveWmw() *cobra.Command {
 
+	// Get config flags with default values
+	cliOpts := genericclioptions.NewConfigFlags(true)
 
+    // Make wmw command
+    wmwCmd := &cobra.Command{
+        Use:   "wmw",
+        Short:  "Remove a KubeStellar workload management workspace",
+        Args:  cobra.ExactArgs(1),
+        RunE: func(cmd *cobra.Command, args []string) error {
+//            fmt.Printf("REMOVE WMW %s\n", args[0])
+            err := removeWmw(cmd, cliOpts, args)
+            return err
+        },
+    }
 
-func init() {
-	// Make a newflag set named rmWmw
-	fs := pflag.NewFlagSet("rmWmw", pflag.ExitOnError)
+	// Make a new flag set named rmwmw
+	fs := pflag.NewFlagSet("rmwmw", pflag.ExitOnError)
 
-	klog.InitFlags(flag.CommandLine)
+    // MAY BE POSSIBLE TO DO WITHOUT THIS
+    // **** WHAT IS klog DOING WITH FLAGS? ****
+//	klog.InitFlags(flag.CommandLine)
+    // Add to Go flag set to fs **** WHAT IS THIS FOR
 	fs.AddGoFlagSet(flag.CommandLine)
 
-	// get config flags with default values
-	cliOpts := genericclioptions.NewConfigFlags(true)
-	// add cliOpts flags to fs (flow from syntax is confusing)
+	// Add cliOpts flags to fs (flow from syntax is confusing)
 	cliOpts.AddFlags(fs)
+
+    // Add flags to our command
+    wmwCmd.PersistentFlags().AddFlagSet(fs)
+    // IS THIS FUNCTIONALLY IDENTICAL TO THE ABOVE?
+//    cliOpts.AddFlags(wmwCmd.PersistentFlags())
+
+    return wmwCmd
 }
 
-func removeWmw() {
+// Perform the actual workload management workspace removal
+func removeWmw(wmwCmd *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string) error {
+
+    fmt.Printf("REMOVE WMW %s\n", args[0])
+
+    // Get client config from flags
+    config, err := cliOpts.ToRESTConfig()
+	if err != nil {
+//		logger.Error(err, "Failed to get client from flags")
+		return err
+	}
+
+    // Create client-go instance from config
+    client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+//		logger.Error(err, "Failed create client-go instance")
+		return err
+	}
+
+    vinfo, _ := client.Discovery().ServerVersion()
+    fmt.Println(vinfo)
+
+    return nil
+//    return errors.New("rm wmw err")
 }

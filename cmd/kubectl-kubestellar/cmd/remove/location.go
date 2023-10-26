@@ -17,8 +17,12 @@ package remove
 
 import (
     "fmt"
+    "flag"
 
     "github.com/spf13/cobra"
+    "github.com/spf13/pflag"
+
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
 var locationCmd = &cobra.Command{
@@ -27,6 +31,29 @@ var locationCmd = &cobra.Command{
     Short:  "Remove a KubeStellar location object",
     Args:  cobra.ExactArgs(1),
     Run: func(cmd *cobra.Command, args []string) {
-        fmt.Println("LOC")
+        fmt.Printf("REMOVE LOCATION %s\n", args[0])
     },
+}
+
+func init() {
+	// Make a new flag set named rmloc
+	fs := pflag.NewFlagSet("rmloc", pflag.ExitOnError)
+
+    // **** WHAT IS klog DOING WITH FLAGS? ****
+//	klog.InitFlags(flag.CommandLine)
+    // Add to Go flag set to fs **** WHAT IS THIS FOR
+	fs.AddGoFlagSet(flag.CommandLine)
+
+	// Get config flags with default values
+	cliOpts := genericclioptions.NewConfigFlags(true)
+	// Add cliOpts flags to fs (flow from syntax is confusing)
+	cliOpts.AddFlags(fs)
+
+    // Add flags to our command
+    locationCmd.PersistentFlags().AddFlagSet(fs)
+}
+
+// Perform the actual location removal
+func removeLocation() error {
+    return nil
 }

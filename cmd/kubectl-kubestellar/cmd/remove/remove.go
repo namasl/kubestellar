@@ -40,6 +40,6 @@ var RemoveCmd = &cobra.Command{
 
 func init() {
     RemoveCmd.AddCommand(locationCmd)
-    RemoveCmd.AddCommand(wmwCmd)
+    RemoveCmd.AddCommand(NewCmdRemoveWmw())
     // add flags
 }
