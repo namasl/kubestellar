@@ -58,10 +58,9 @@ func NewCmdRemoveWmw() *cobra.Command {
 	// Add cliOpts flags to fs (flow from syntax is confusing)
 	cliOpts.AddFlags(fs)
 
-    // Add flags to our command
+    // Add flags to our command; make these persistent (available to this
+    // command and all sub-commands)
     wmwCmd.PersistentFlags().AddFlagSet(fs)
-    // IS THIS FUNCTIONALLY IDENTICAL TO THE ABOVE?
-//    cliOpts.AddFlags(wmwCmd.PersistentFlags())
 
     return wmwCmd
 }

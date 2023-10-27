@@ -21,10 +21,5 @@ import (
 
 // Run the root command. Error handling is done within Execute().
 func main() {
-//	command := cmd.NewKubestellarCommand()
-//	if err := command.Execute(); err != nil {
-//		fmt.Fprintln(os.Stderr, err)
-//		os.Exit(err)
-//	}
 	cmd.Execute()
 }
