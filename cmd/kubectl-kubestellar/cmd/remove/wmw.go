@@ -17,8 +17,7 @@ package remove
 
 import (
     "fmt"
-    "flag"
-//    "errors"
+//    "flag"
 
     "github.com/spf13/cobra"
     "github.com/spf13/pflag"
@@ -29,40 +28,33 @@ import (
 )
 
 // Create the Cobra sub-command for 'kubectl kubestellar remove wmw'
-func NewCmdRemoveWmw() *cobra.Command {
+func newCmdRemoveWmw() *cobra.Command {
 
 	// Get config flags with default values
 	cliOpts := genericclioptions.NewConfigFlags(true)
 
     // Make wmw command
-    wmwCmd := &cobra.Command{
+    cmdWmw := &cobra.Command{
         Use:   "wmw",
         Short:  "Remove a KubeStellar workload management workspace",
         Args:  cobra.ExactArgs(1),
         RunE: func(cmd *cobra.Command, args []string) error {
-//            fmt.Printf("REMOVE WMW %s\n", args[0])
             err := removeWmw(cmd, cliOpts, args)
             return err
         },
     }
 
-	// Make a new flag set named rmwmw
+	// Make a new flag set named rm
 	fs := pflag.NewFlagSet("rmwmw", pflag.ExitOnError)
-
-    // MAY BE POSSIBLE TO DO WITHOUT THIS
-    // **** WHAT IS klog DOING WITH FLAGS? ****
-//	klog.InitFlags(flag.CommandLine)
-    // Add to Go flag set to fs **** WHAT IS THIS FOR
-	fs.AddGoFlagSet(flag.CommandLine)
 
 	// Add cliOpts flags to fs (flow from syntax is confusing)
 	cliOpts.AddFlags(fs)
 
     // Add flags to our command; make these persistent (available to this
     // command and all sub-commands)
-    wmwCmd.PersistentFlags().AddFlagSet(fs)
+    cmdWmw.PersistentFlags().AddFlagSet(fs)
 
-    return wmwCmd
+    return cmdWmw
 }
 
 // Perform the actual workload management workspace removal

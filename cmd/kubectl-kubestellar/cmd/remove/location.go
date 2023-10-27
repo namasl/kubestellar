@@ -25,7 +25,7 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
-var locationCmd = &cobra.Command{
+var cmdLocation = &cobra.Command{
     Use:   "location",
     Aliases: []string{"loc"},
     Short:  "Remove a KubeStellar location object",
@@ -50,7 +50,7 @@ func init() {
 	cliOpts.AddFlags(fs)
 
     // Add flags to our command
-    locationCmd.PersistentFlags().AddFlagSet(fs)
+    cmdLocation.PersistentFlags().AddFlagSet(fs)
 }
 
 // Perform the actual location removal

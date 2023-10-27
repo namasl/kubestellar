@@ -46,6 +46,8 @@ This command provides the kubestellar sub-command for kubectl.`,
     Args:  cobra.ExactArgs(1),
     // If an invalid sub-command is sent, the function in RunE will execute.
     // Use this to inform of invalid arguments, and return an error.
+	// For details on inconsistent error behavior, see
+	// https://github.com/spf13/cobra/issues/706
     RunE: func(cmd *cobra.Command, args []string) error {
         if len(args) > 0 {
 			// TODO, this only runs if "Args:  cobra.ExactArgs(1)" is set; if not
