@@ -20,17 +20,13 @@ import (
     "fmt"
 
     "github.com/spf13/cobra"
-    "github.com/spf13/pflag"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-    "k8s.io/client-go/kubernetes"
+//    "k8s.io/client-go/kubernetes"
 )
 
 // Create the Cobra sub-command for 'kubectl kubestellar remove wmw'
-func newCmdRemoveWmw() *cobra.Command {
-
-	// Get config flags with default values
-	cliOpts := genericclioptions.NewConfigFlags(true)
+func newCmdRemoveWmw(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 
     // Make wmw command
     cmdWmw := &cobra.Command{
@@ -44,14 +40,6 @@ func newCmdRemoveWmw() *cobra.Command {
         },
     }
 
-	// Make a new flag set named rm
-	fs := pflag.NewFlagSet("rmwmw", pflag.ExitOnError)
-	// Add cliOpts flags to fs (flow from syntax is confusing)
-	cliOpts.AddFlags(fs)
-    // Add flags to our command; make these persistent (available to this
-    // command and all sub-commands)
-    cmdWmw.PersistentFlags().AddFlagSet(fs)
-
     return cmdWmw
 }
 
@@ -59,7 +47,7 @@ func newCmdRemoveWmw() *cobra.Command {
 func removeWmw(wmwCmd *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string) error {
 
     fmt.Printf("REMOVE WMW %s\n", args[0])
-
+/*
     // Get client config from flags
     config, err := cliOpts.ToRESTConfig()
 	if err != nil {
@@ -84,7 +72,7 @@ func removeWmw(wmwCmd *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
 
     // delete WMW
     // kubectl "${kubectl_flags[@]}" delete workspaces.tenancy.kcp.io "$wmw_name"
-
+*/
     fmt.Println("done")
 
     return nil

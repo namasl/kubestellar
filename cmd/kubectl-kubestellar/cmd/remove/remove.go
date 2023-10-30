@@ -20,6 +20,9 @@ import (
     "errors"
 
     "github.com/spf13/cobra"
+    "github.com/spf13/pflag"
+
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
 var RemoveCmd = &cobra.Command{
@@ -39,6 +42,16 @@ var RemoveCmd = &cobra.Command{
 }
 
 func init() {
+	// Get config flags with default values
+	cliOpts := genericclioptions.NewConfigFlags(true)
+	// Make a new flag set named rm
+	fs := pflag.NewFlagSet("rm", pflag.ExitOnError)
+	// Add cliOpts flags to fs (flow from syntax is confusing)
+	cliOpts.AddFlags(fs)
+    // Add flags to our command; make these persistent (available to this
+    // command and all sub-commands)
+    RemoveCmd.PersistentFlags().AddFlagSet(fs)
+
     RemoveCmd.AddCommand(cmdLocation)
-    RemoveCmd.AddCommand(newCmdRemoveWmw())
+    RemoveCmd.AddCommand(newCmdRemoveWmw(cliOpts))
 }
