@@ -21,7 +21,8 @@ import (
 
 var wmwCmd = &cobra.Command{
     Use:   "wmw",
-    Short:  "Ensure a KubeStellar WMW exists",
+    Aliases: []string{"wds"},
+    Short:  "Ensure existence and configuration of a workload management workspace/description space (WMW/WDS)",
     Args:  cobra.ExactArgs(1),
     Run: func(cmd *cobra.Command, args []string) {
         fmt.Println("WMW")

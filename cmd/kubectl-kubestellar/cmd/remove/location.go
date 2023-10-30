@@ -28,7 +28,7 @@ import (
 var cmdLocation = &cobra.Command{
     Use:   "location",
     Aliases: []string{"loc"},
-    Short:  "Remove a KubeStellar location object",
+    Short:  "Delete an inventory entry for a given WEC",
     Args:  cobra.ExactArgs(1),
     Run: func(cmd *cobra.Command, args []string) {
         fmt.Printf("REMOVE LOCATION %s\n", args[0])

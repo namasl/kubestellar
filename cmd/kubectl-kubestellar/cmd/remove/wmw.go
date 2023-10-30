@@ -11,19 +11,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// sub-command for removing a workload management workspace
+// Sub-command for removing a workload management workspace (WMW),
+// also known as a workload description space (WDS)
 
 package remove
 
 import (
     "fmt"
-//    "flag"
 
     "github.com/spf13/cobra"
     "github.com/spf13/pflag"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-//	"k8s.io/klog/v2"
     "k8s.io/client-go/kubernetes"
 )
 
@@ -35,8 +34,9 @@ func newCmdRemoveWmw() *cobra.Command {
 
     // Make wmw command
     cmdWmw := &cobra.Command{
-        Use:   "wmw",
-        Short:  "Remove a KubeStellar workload management workspace",
+        Use:   "wmw <WMW_NAME>",
+        Aliases: []string{"wds"},
+        Short:  "Delete a workload management workspace/description space (WMW/WDS)",
         Args:  cobra.ExactArgs(1),
         RunE: func(cmd *cobra.Command, args []string) error {
             err := removeWmw(cmd, cliOpts, args)
@@ -46,10 +46,8 @@ func newCmdRemoveWmw() *cobra.Command {
 
 	// Make a new flag set named rm
 	fs := pflag.NewFlagSet("rmwmw", pflag.ExitOnError)
-
 	// Add cliOpts flags to fs (flow from syntax is confusing)
 	cliOpts.AddFlags(fs)
-
     // Add flags to our command; make these persistent (available to this
     // command and all sub-commands)
     cmdWmw.PersistentFlags().AddFlagSet(fs)
@@ -76,8 +74,18 @@ func removeWmw(wmwCmd *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
 		return err
 	}
 
-    vinfo, _ := client.Discovery().ServerVersion()
-    fmt.Println(vinfo)
+    //resource, err := client.CoreV1().
+
+    // go to root KCP workspace
+    // kubectl ws "${kubectl_flags[@]}" root
+ 
+    // check that provided WMW exists
+    // if kubectl "${kubectl_flags[@]}" get workspaces.tenancy.kcp.io "$wmw_name" &>/dev/null
+
+    // delete WMW
+    // kubectl "${kubectl_flags[@]}" delete workspaces.tenancy.kcp.io "$wmw_name"
+
+    fmt.Println("done")
 
     return nil
 //    return errors.New("rm wmw err")

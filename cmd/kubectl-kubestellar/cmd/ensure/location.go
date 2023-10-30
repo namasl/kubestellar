@@ -22,7 +22,7 @@ import (
 var locationCmd = &cobra.Command{
     Use:   "location",
     Aliases: []string{"loc"},
-    Short:  "Ensure a KubeStellar location exists",
+    Short:  "Ensure existence and configuration of an inventory listing for a WEC",
     Args:  cobra.ExactArgs(1),
     Run: func(cmd *cobra.Command, args []string) {
         fmt.Println("LOC")
