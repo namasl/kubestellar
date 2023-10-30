@@ -17,10 +17,8 @@ package remove
 
 import (
     "fmt"
-    "flag"
 
     "github.com/spf13/cobra"
-    "github.com/spf13/pflag"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
@@ -35,25 +33,25 @@ var cmdLocation = &cobra.Command{
     },
 }
 
-func init() {
-	// Make a new flag set named rmloc
-	fs := pflag.NewFlagSet("rmloc", pflag.ExitOnError)
+// Create the Cobra sub-command for 'kubectl kubestellar remove location'
+func newCmdRemoveLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
+    // Make wmw command
+    cmdLocation := &cobra.Command{
+        Use:   "location <LOCATION_NAME>",
+        Aliases: []string{"loc"},
+        Short:  "Delete an inventory entry for a given WEC",
+        Args:  cobra.ExactArgs(1),
+        RunE: func(cmd *cobra.Command, args []string) error {
+            err := removeLocation(cmd, cliOpts, args)
+            return err
+        },
+    }
 
-    // **** WHAT IS klog DOING WITH FLAGS? ****
-//	klog.InitFlags(flag.CommandLine)
-    // Add to Go flag set to fs **** WHAT IS THIS FOR
-	fs.AddGoFlagSet(flag.CommandLine)
-
-	// Get config flags with default values
-	cliOpts := genericclioptions.NewConfigFlags(true)
-	// Add cliOpts flags to fs (flow from syntax is confusing)
-	cliOpts.AddFlags(fs)
-
-    // Add flags to our command
-    cmdLocation.PersistentFlags().AddFlagSet(fs)
+    return cmdLocation
 }
 
 // Perform the actual location removal
-func removeLocation() error {
+func removeLocation(wmwCmd *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string) error {
+    fmt.Printf("REMOVE LOC %s\n", args[0])
     return nil
 }

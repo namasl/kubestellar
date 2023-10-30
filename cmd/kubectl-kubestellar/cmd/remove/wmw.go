@@ -27,7 +27,6 @@ import (
 
 // Create the Cobra sub-command for 'kubectl kubestellar remove wmw'
 func newCmdRemoveWmw(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
-
     // Make wmw command
     cmdWmw := &cobra.Command{
         Use:   "wmw <WMW_NAME>",

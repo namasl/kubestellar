@@ -52,6 +52,8 @@ func init() {
     // command and all sub-commands)
     RemoveCmd.PersistentFlags().AddFlagSet(fs)
 
+    // add location sub-command
     RemoveCmd.AddCommand(cmdLocation)
+    // add wmw sub-command
     RemoveCmd.AddCommand(newCmdRemoveWmw(cliOpts))
 }
