@@ -48,10 +48,6 @@ func newCmdRemoveWmw(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
     return cmdWmw
 }
 
-    // Who has dealt with manipulating KCP workspaces in Go, and manipulating objects
-    // within those workspaces (create, delete, list what's available...)
-    // try Paulo, Ezra, Jun
-
 // Perform the actual workload management workspace removal
 func removeWmw(wmwCmd *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string) error {
     wmwName := args[0]
@@ -96,6 +92,7 @@ func removeWmw(wmwCmd *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
     // kubectl "${kubectl_flags[@]}" delete workspaces.tenancy.kcp.io "$wmw_name"
 
     fmt.Println(resource)
+    logger.Info("blabla")
 
     return nil
 //    return errors.New("rm wmw err")
