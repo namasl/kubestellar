@@ -23,7 +23,6 @@ import (
     "github.com/spf13/cobra"
     "github.com/spf13/pflag"
 
-
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 //    "k8s.io/client-go/kubernetes"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +30,7 @@ import (
 
     kcpclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
 //    tenancyv1alpha1 "github.com/kcp-dev/kcp/pkg/client/clientset/versioned/typed/tenancy/v1alpha1"
+    "github.com/kcp-dev/logicalcluster/v3"
 )
 
 // Create the Cobra sub-command for 'kubectl kubestellar remove wds'
@@ -61,10 +61,12 @@ func removeWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
     ctx := context.Background()
 	logger := klog.FromContext(ctx)
 
+    // Print all flags and their values if verbosity level is at least 1
 	cmdWds.Flags().VisitAll(func(flg *pflag.Flag) {
 		logger.V(1).Info(fmt.Sprintf("Command line flag %s=%s", flg.Name, flg.Value))
 	})
 
+    // TODO remove this line, just here for development
     logger.Info(fmt.Sprintf("REMOVE WDS %s", wdsName))
 
     // Get client config from flags
@@ -90,6 +92,10 @@ func removeWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
 
     // Delete WDS
     // kubectl "${kubectl_flags[@]}" delete workspaces.tenancy.kcp.io "$wds_name"
+
+
+    wdsPath := logicalcluster.Name("root").Path().Join(wdsName).String()
+    fmt.Println(wdsPath)
 
 
     fmt.Println("****** LIST ******")
