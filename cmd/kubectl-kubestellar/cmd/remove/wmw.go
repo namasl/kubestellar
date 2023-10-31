@@ -83,14 +83,26 @@ func removeWmw(cmdWmw *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
     // Check that provided WMW exists
     // if kubectl "${kubectl_flags[@]}" get workspaces.tenancy.kcp.io "$wmw_name" &>/dev/null
 
-    opts := metav1.GetOptions{}
-    resource, err := client.TenancyV1alpha1().WorkspaceTypes().Get(ctx, wmwName, opts)
-    //tenancyv1alpha1.Delete()
+
+    get, err := client.TenancyV1alpha1().WorkspaceTypes().Get(ctx, wmwName, metav1.GetOptions{})
+	if err != nil {
+		logger.Error(err, "Failed to get workspace")
+		return err
+	}
 
     // Delete WMW
     // kubectl "${kubectl_flags[@]}" delete workspaces.tenancy.kcp.io "$wmw_name"
 
-    fmt.Println(resource)
+    fmt.Println("****** GET ******")
+    fmt.Println(get)
+
+    fmt.Println("****** LIST ******")
+    list, err := client.TenancyV1alpha1().WorkspaceTypes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		logger.Error(err, "Failed to list workspace")
+		return err
+	}
+    fmt.Println(list)
 
     return nil
 //    return errors.New("rm wmw err")
