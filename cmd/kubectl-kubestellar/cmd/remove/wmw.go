@@ -56,8 +56,6 @@ func removeWmw(cmdWmw *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
     ctx := context.Background()
 	logger := klog.FromContext(ctx)
 
-    var opts v1.GetOptions
-
 	cmdWmw.Flags().VisitAll(func(flg *pflag.Flag) {
 		logger.V(1).Info(fmt.Sprintf("Command line flag %s=%s", flg.Name, flg.Value))
 	})
@@ -79,20 +77,20 @@ func removeWmw(cmdWmw *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
 		return err
 	}
 
-    // go to root KCP workspace
+    // Go to root KCP workspace
     // kubectl ws "${kubectl_flags[@]}" root
  
-    // check that provided WMW exists
+    // Check that provided WMW exists
     // if kubectl "${kubectl_flags[@]}" get workspaces.tenancy.kcp.io "$wmw_name" &>/dev/null
-//nick@debian:~$ KUBECONFIG=ks-core.kubeconfig kubectl api-resources
-//NAME                              SHORTNAMES   APIVERSION                        NAMESPACED   KIND
-//workspaces                        ws           tenancy.kcp.io/v1alpha1           false        Workspace
+
+    var opts v1.GetOptions
+
 
     //resource, err := client.CoreV1alpha1().RESTClient().Get().
     resource, err := client.TenancyV1alpha1().WorkspaceTypes().Get(ctx, wmwName, opts)
     //tenancyv1alpha1.Delete()
 
-    // delete WMW
+    // Delete WMW
     // kubectl "${kubectl_flags[@]}" delete workspaces.tenancy.kcp.io "$wmw_name"
 
     fmt.Println(resource)
