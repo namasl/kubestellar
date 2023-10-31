@@ -21,11 +21,13 @@ import (
     "context"
 
     "github.com/spf13/cobra"
+    "github.com/spf13/pflag"
+
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 //    "k8s.io/client-go/kubernetes"
     v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    klog "k8s.io/klog/v2"
+    "k8s.io/klog/v2"
 
     kcpclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
 //    tenancyv1alpha1 "github.com/kcp-dev/kcp/pkg/client/clientset/versioned/typed/tenancy/v1alpha1"
@@ -49,14 +51,18 @@ func newCmdRemoveWmw(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 }
 
 // Perform the actual workload management workspace removal
-func removeWmw(wmwCmd *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string) error {
+func removeWmw(cmdWmw *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string) error {
     wmwName := args[0]
     ctx := context.Background()
 	logger := klog.FromContext(ctx)
 
     var opts v1.GetOptions
 
-    fmt.Printf("REMOVE WMW %s\n", wmwName)
+	cmdWmw.Flags().VisitAll(func(flg *pflag.Flag) {
+		logger.V(1).Info(fmt.Sprintf("Command line flag %s=%s", flg.Name, flg.Value))
+	})
+
+    logger.Info(fmt.Sprintf("REMOVE WMW %s", wmwName))
 
     // Get client config from flags
     config, err := cliOpts.ToRESTConfig()
@@ -72,8 +78,6 @@ func removeWmw(wmwCmd *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
 		logger.Error(err, "Failed create client-go instance")
 		return err
 	}
-
-
 
     // go to root KCP workspace
     // kubectl ws "${kubectl_flags[@]}" root
@@ -92,7 +96,6 @@ func removeWmw(wmwCmd *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
     // kubectl "${kubectl_flags[@]}" delete workspaces.tenancy.kcp.io "$wmw_name"
 
     fmt.Println(resource)
-    logger.Info("blabla")
 
     return nil
 //    return errors.New("rm wmw err")
