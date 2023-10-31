@@ -25,6 +25,7 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
+// Create Cobra sub-command for 'kubectl kubestellar remove'
 var RemoveCmd = &cobra.Command{
     Use:    "remove",
     Aliases: []string{"rm"},
@@ -42,11 +43,14 @@ var RemoveCmd = &cobra.Command{
 }
 
 func init() {
-	// Get config flags with default values
+	// Get config flags with default values.
+    // Passing "true" will "use persistent client config, rest mapper,
+	// discovery client, and propagate them to the places that need them,
+	// rather than instantiating them multiple times."
 	cliOpts := genericclioptions.NewConfigFlags(true)
 	// Make a new flag set named rm
 	fs := pflag.NewFlagSet("rm", pflag.ExitOnError)
-	// Add cliOpts flags to fs (flow from syntax is confusing)
+	// Add cliOpts flags to fs (flow from syntax is confusing, goes -->)
 	cliOpts.AddFlags(fs)
     // Add flags to our command; make these persistent (available to this
     // command and all sub-commands)

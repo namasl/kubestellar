@@ -18,11 +18,17 @@ package remove
 
 import (
     "fmt"
+    "context"
 
     "github.com/spf13/cobra"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 //    "k8s.io/client-go/kubernetes"
+    v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    klog "k8s.io/klog/v2"
+
+    kcpclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
+//    tenancyv1alpha1 "github.com/kcp-dev/kcp/pkg/client/clientset/versioned/typed/tenancy/v1alpha1"
 )
 
 // Create the Cobra sub-command for 'kubectl kubestellar remove wmw'
@@ -42,37 +48,54 @@ func newCmdRemoveWmw(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
     return cmdWmw
 }
 
+    // Who has dealt with manipulating KCP workspaces in Go, and manipulating objects
+    // within those workspaces (create, delete, list what's available...)
+    // try Paulo, Ezra, Jun
+
 // Perform the actual workload management workspace removal
 func removeWmw(wmwCmd *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string) error {
+    wmwName := args[0]
+    ctx := context.Background()
+	logger := klog.FromContext(ctx)
 
-    fmt.Printf("REMOVE WMW %s\n", args[0])
-/*
+    var opts v1.GetOptions
+
+    fmt.Printf("REMOVE WMW %s\n", wmwName)
+
     // Get client config from flags
     config, err := cliOpts.ToRESTConfig()
 	if err != nil {
-//		logger.Error(err, "Failed to get client from flags")
+		logger.Error(err, "Failed to get client from flags")
 		return err
 	}
 
     // Create client-go instance from config
-    client, err := kubernetes.NewForConfig(config)
+    //client, err := kubernetes.NewForConfig(config)
+    client, err := kcpclientset.NewForConfig(config)
 	if err != nil {
-//		logger.Error(err, "Failed create client-go instance")
+		logger.Error(err, "Failed create client-go instance")
 		return err
 	}
 
-    //resource, err := client.CoreV1().
+
 
     // go to root KCP workspace
     // kubectl ws "${kubectl_flags[@]}" root
  
     // check that provided WMW exists
     // if kubectl "${kubectl_flags[@]}" get workspaces.tenancy.kcp.io "$wmw_name" &>/dev/null
+//nick@debian:~$ KUBECONFIG=ks-core.kubeconfig kubectl api-resources
+//NAME                              SHORTNAMES   APIVERSION                        NAMESPACED   KIND
+//workspaces                        ws           tenancy.kcp.io/v1alpha1           false        Workspace
+
+    //resource, err := client.CoreV1alpha1().RESTClient().Get().
+    resource, err := client.TenancyV1alpha1().WorkspaceTypes().Get(ctx, wmwName, opts)
+    //tenancyv1alpha1.Delete()
 
     // delete WMW
     // kubectl "${kubectl_flags[@]}" delete workspaces.tenancy.kcp.io "$wmw_name"
-*/
-    fmt.Println("done")
+
+    fmt.Println(resource)
 
     return nil
 //    return errors.New("rm wmw err")
