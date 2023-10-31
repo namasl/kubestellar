@@ -26,7 +26,7 @@ import (
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 //    "k8s.io/client-go/kubernetes"
-    v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/klog/v2"
 
     kcpclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
@@ -83,10 +83,7 @@ func removeWmw(cmdWmw *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
     // Check that provided WMW exists
     // if kubectl "${kubectl_flags[@]}" get workspaces.tenancy.kcp.io "$wmw_name" &>/dev/null
 
-    var opts v1.GetOptions
-
-
-    //resource, err := client.CoreV1alpha1().RESTClient().Get().
+    opts := metav1.GetOptions{}
     resource, err := client.TenancyV1alpha1().WorkspaceTypes().Get(ctx, wmwName, opts)
     //tenancyv1alpha1.Delete()
 
