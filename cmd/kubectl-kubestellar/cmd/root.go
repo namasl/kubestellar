@@ -44,6 +44,7 @@ var rootCmd = &cobra.Command{
 configuration management for edge, multi-cloud, and hybrid cloud.
 This command provides the kubestellar sub-command for kubectl.`,
     Args:  cobra.ExactArgs(1),
+//	SilenceUsage: true,
     // If an invalid sub-command is sent, the function in RunE will execute.
     // Use this to inform of invalid arguments, and return an error.
 	// For details on inconsistent error behavior, see

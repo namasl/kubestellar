@@ -34,5 +34,5 @@ var EnsureCmd = &cobra.Command{
 func init() {
     // add flags
     EnsureCmd.AddCommand(locationCmd)
-    EnsureCmd.AddCommand(wmwCmd)
+    EnsureCmd.AddCommand(wdsCmd)
 }
