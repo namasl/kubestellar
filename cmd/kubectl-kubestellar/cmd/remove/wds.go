@@ -31,6 +31,8 @@ import (
     kcpclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
 //    tenancyv1alpha1 "github.com/kcp-dev/kcp/pkg/client/clientset/versioned/typed/tenancy/v1alpha1"
     "github.com/kcp-dev/logicalcluster/v3"
+
+	clientopts "github.com/kubestellar/kubestellar/pkg/client-options"
 )
 
 // Create the Cobra sub-command for 'kubectl kubestellar remove wds'
@@ -69,10 +71,22 @@ func removeWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
     // TODO remove this line, just here for development
     logger.Info(fmt.Sprintf("REMOVE WDS %s", wdsName))
 
+    // Options for root workspace
+	rootClientOpts := clientopts.NewClientOpts("root", "access to the root workspace")
+	// set default context to "root"
+	rootClientOpts.SetDefaultCurrentContext("root")
+	// Make a new flag set named rmwds
+	fs := pflag.NewFlagSet("rmwds", pflag.ExitOnError)
+	// Add cliOpts flags to fs (flow from syntax is confusing, goes -->)
+	cliOpts.AddFlags(fs)
+    // add fs to rootClientOpts
+    rootClientOpts.AddFlags(fs)
+
     // Get client config from flags
-    config, err := cliOpts.ToRESTConfig()
+//    config, err := cliOpts.ToRESTConfig()
+    config, err := rootClientOpts.ToRESTConfig()
 	if err != nil {
-		logger.Error(err, "Failed to get client from flags")
+		logger.Error(err, "Failed to get config from flags")
 		return err
 	}
 
@@ -93,18 +107,20 @@ func removeWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
     // Delete WDS
     // kubectl "${kubectl_flags[@]}" delete workspaces.tenancy.kcp.io "$wds_name"
 
-
+    fmt.Println("****** PATH ******")
     wdsPath := logicalcluster.Name("root").Path().Join(wdsName).String()
     fmt.Println(wdsPath)
 
 
-    fmt.Println("****** LIST ******")
-    list, err := client.TenancyV1alpha1().WorkspaceTypes().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		logger.Error(err, "Failed to list workspace")
-		return err
-	}
-    fmt.Println(list)
+    // fmt.Println("****** LIST ******")
+    // list, err := client.TenancyV1alpha1().WorkspaceTypes().List(ctx, metav1.ListOptions{})
+	// if err != nil {
+	// 	logger.Error(err, "Failed to list workspace")
+	// 	return err
+	// }
+    // fmt.Println(list)
+
+
 
     get, err := client.TenancyV1alpha1().WorkspaceTypes().Get(ctx, wdsName, metav1.GetOptions{})
 	if err != nil {
