@@ -80,6 +80,7 @@ func main() {
 	// sets context clientcmd.ConfigOverrides.CurrentContext to "base"
 	mbwsClientOpts.SetDefaultCurrentContext("base")
 
+	// add fs flags to ....ClientOpts
 	rootClientOpts.AddFlags(fs)
 	mbwsClientOpts.AddFlags(fs)
 

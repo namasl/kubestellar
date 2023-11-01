@@ -68,9 +68,6 @@ func removeWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
 		logger.V(1).Info(fmt.Sprintf("Command line flag %s=%s", flg.Name, flg.Value))
 	})
 
-    // TODO remove this line, just here for development
-    logger.Info(fmt.Sprintf("REMOVE WDS %s", wdsName))
-
     // Options for root workspace
 	rootClientOpts := clientopts.NewClientOpts("root", "access to the root workspace")
 	// set default context to "root"
@@ -81,6 +78,12 @@ func removeWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
 	cliOpts.AddFlags(fs)
     // add fs to rootClientOpts
     rootClientOpts.AddFlags(fs)
+
+
+    fmt.Println("****** NEWFLAGS ******")
+	fs.VisitAll(func(flg *pflag.Flag) {
+		logger.Info(fmt.Sprintf("Command line flag %s=%s", flg.Name, flg.Value))
+	})
 
     // Get client config from flags
 //    config, err := cliOpts.ToRESTConfig()
