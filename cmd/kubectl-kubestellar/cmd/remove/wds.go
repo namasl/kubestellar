@@ -80,7 +80,7 @@ func removeWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
     // add fs to rootClientOpts
     rootClientOpts.AddFlags(fs)
 
-    fs.Parse(os.Args[1:])
+    //fs.Parse(os.Args[1:])
 
     fmt.Println("****** NEWFLAGS ******")
 	fs.VisitAll(func(flg *pflag.Flag) {
@@ -127,7 +127,8 @@ func removeWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
 
 
 
-    get, err := client.TenancyV1alpha1().WorkspaceTypes().Get(ctx, wdsName, metav1.GetOptions{})
+    //get, err := client.TenancyV1alpha1().WorkspaceTypes().Get(ctx, wdsName, metav1.GetOptions{})
+    get, err := client.TenancyV1alpha1().Workspaces().Get(ctx, wdsName, metav1.GetOptions{})
 	if err != nil {
 		logger.Error(err, "Failed to get workspace")
 		return err
