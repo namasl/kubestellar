@@ -138,6 +138,14 @@ func removeWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
     fmt.Println(get)
 
 
+    err = client.TenancyV1alpha1().Workspaces().Delete(ctx, wdsName, metav1.DeleteOptions{})
+	if err != nil {
+		logger.Error(err, "Failed to delete workspace")
+		return err
+	}
+    fmt.Println("****** DELETE ******")
+
+
     return nil
 //    return errors.New("rm wds err")
 }
