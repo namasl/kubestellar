@@ -17,7 +17,7 @@ limitations under the License.
 package remove
 
 import (
-    "os"
+    //"os"
     "fmt"
     "context"
 
