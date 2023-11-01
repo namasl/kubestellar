@@ -90,13 +90,6 @@ func removeWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
 		return err
 	}
 
-    // Check to see whether we can get the workspace before deleting.
-    _, err = client.TenancyV1alpha1().Workspaces().Get(ctx, wdsName, metav1.GetOptions{})
-	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to get workspace %s", wdsName))
-		return err
-	}
-
     // Delete WDS KCP workspace
     err = client.TenancyV1alpha1().Workspaces().Delete(ctx, wdsName, metav1.DeleteOptions{})
 	if err != nil {
