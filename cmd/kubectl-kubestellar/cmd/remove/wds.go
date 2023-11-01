@@ -17,6 +17,7 @@ limitations under the License.
 package remove
 
 import (
+    "os"
     "fmt"
     "context"
 
@@ -79,6 +80,7 @@ func removeWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
     // add fs to rootClientOpts
     rootClientOpts.AddFlags(fs)
 
+    fs.Parse(os.Args[1:])
 
     fmt.Println("****** NEWFLAGS ******")
 	fs.VisitAll(func(flg *pflag.Flag) {
