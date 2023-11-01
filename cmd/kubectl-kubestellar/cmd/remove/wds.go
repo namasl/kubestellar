@@ -71,7 +71,7 @@ func removeWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
     // Options for root workspace
 	rootClientOpts := clientopts.NewClientOpts("root", "access to the root workspace")
 	// set default context to "root"
-	//rootClientOpts.SetDefaultCurrentContext("root")
+	rootClientOpts.SetDefaultCurrentContext("base")
 	// Make a new flag set named rmwds
 	fs := pflag.NewFlagSet("rmwds", pflag.ExitOnError)
 	// Add cliOpts flags to fs (flow from syntax is confusing, goes -->)
