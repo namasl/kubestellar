@@ -90,6 +90,7 @@ func main() {
 	logger := klog.Background()
 	ctx = klog.NewContext(ctx, logger)
 
+	// print out flags for verbosity level >=1
 	fs.VisitAll(func(flg *pflag.Flag) {
 		logger.V(1).Info("Command line flag", flg.Name, flg.Value)
 	})
