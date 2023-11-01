@@ -126,8 +126,9 @@ func removeWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
     // fmt.Println(list)
 
 
-
+    // this line will see root
     //get, err := client.TenancyV1alpha1().WorkspaceTypes().Get(ctx, wdsName, metav1.GetOptions{})
+    // this line will see wmw1
     get, err := client.TenancyV1alpha1().Workspaces().Get(ctx, wdsName, metav1.GetOptions{})
 	if err != nil {
 		logger.Error(err, "Failed to get workspace")
