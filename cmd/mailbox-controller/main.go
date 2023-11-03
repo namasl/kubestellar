@@ -61,21 +61,26 @@ func main() {
 	resyncPeriod := time.Duration(0)
 	var concurrency int = 4
 	serverBindAddress := ":10203"
+	// elaborate way to make string that looks like "root:espw"
 	espwPath := logicalcluster.Name("root").Path().Join("espw").String()
 	fs := pflag.NewFlagSet("mailbox-controller", pflag.ExitOnError)
 	klog.InitFlags(flag.CommandLine)
 	fs.AddGoFlagSet(flag.CommandLine)
 	fs.Var(&utilflag.IPPortVar{Val: &serverBindAddress}, "server-bind-address", "The IP address with port at which to serve /metrics and /debug/pprof/")
 
+	// flags, with default values
 	fs.IntVar(&concurrency, "concurrency", concurrency, "number of syncs to run in parallel")
 	fs.StringVar(&espwPath, "espw-path", espwPath, "the pathname of the edge service provider workspace")
 
 	rootClientOpts := clientopts.NewClientOpts("root", "access to the root workspace")
+	// sets context clientcmd.ConfigOverrides.CurrentContext to "root"
 	rootClientOpts.SetDefaultCurrentContext("root")
 
 	mbwsClientOpts := clientopts.NewClientOpts("mbws", "access to mailbox workspaces (really all clusters)")
+	// sets context clientcmd.ConfigOverrides.CurrentContext to "base"
 	mbwsClientOpts.SetDefaultCurrentContext("base")
 
+	// add fs flags to ....ClientOpts
 	rootClientOpts.AddFlags(fs)
 	mbwsClientOpts.AddFlags(fs)
 
@@ -85,6 +90,7 @@ func main() {
 	logger := klog.Background()
 	ctx = klog.NewContext(ctx, logger)
 
+	// print out flags for verbosity level >=1
 	fs.VisitAll(func(flg *pflag.Flag) {
 		logger.V(1).Info("Command line flag", flg.Name, flg.Value)
 	})
