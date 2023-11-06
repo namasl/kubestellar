@@ -64,11 +64,11 @@ func (opts *ClientOpts) SetDefaultUserAndCluster(user, cluster string) *ClientOp
 // }
 
 // Set the server
-func (opts *ClientOpts) SetClusterInfoServer(server string) *ClientOpts {
+//func (opts *ClientOpts) SetClusterInfoServer(server string) *ClientOpts {
 	//opts.overrides.ClusterDefaults.Server = server
-	opts.overrides.ClusterInfo.Server = server
-	return opts
-}
+//	opts.overrides.ClusterInfo.Server = server
+//	return opts
+//}
 
 func (opts *ClientOpts) AddFlags(flags *pflag.FlagSet) {
 	flags.StringVar(&opts.loadingRules.ExplicitPath, opts.which+"-kubeconfig", opts.loadingRules.ExplicitPath, "Path to the kubeconfig file to use for "+opts.description)
