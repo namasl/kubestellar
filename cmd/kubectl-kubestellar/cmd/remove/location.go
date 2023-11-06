@@ -94,6 +94,7 @@ func removeLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 
 	// Update host to work on objects within IMW workspace
 	config.Host += ":" + imw
+	logger.V(1).Info(fmt.Sprintf("Set host to %s", config.Host))
 
 	// Create client-go instance from config
 	client, err := clientset.NewForConfig(config)
