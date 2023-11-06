@@ -187,5 +187,12 @@ func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 //   "location-group": "edge"
 // }
 
+// for SyncTarget/Location outputs above, make sure labelname=labelvalue pairs
+// given at the command line match what is in the output. If not, overwrite them with
+// kubectl label --overwrite synctargets.edge.kubestellar.io "$objname" "${key}=${val}"
+// or
+// kubectl label --overwrite locations.edge.kubestellar.io "$objname" "${key}=${val}"
 
-// Make sure the given label exists for SyncTarget and Location
+
+// Not done in Bash script, but can also make sure the SyncTarget has the
+// label "id" = objname
