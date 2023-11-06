@@ -53,6 +53,23 @@ func (opts *ClientOpts) SetDefaultUserAndCluster(user, cluster string) *ClientOp
 	return opts
 }
 
+// Get the server
+// func (opts *ClientOpts) GetClusterServer() string {
+// 	//opts.overrides.ClusterDefaults.Server = server
+// 	config, _ := opts.loadingRules.DefaultClientConfig.RawConfig()
+// 	cluster := config.Clusters
+// 	server := cluster["Server"]
+// 	fmt.Println(server)
+// 	return "server"
+// }
+
+// Set the server
+func (opts *ClientOpts) SetClusterInfoServer(server string) *ClientOpts {
+	//opts.overrides.ClusterDefaults.Server = server
+	opts.overrides.ClusterInfo.Server = server
+	return opts
+}
+
 func (opts *ClientOpts) AddFlags(flags *pflag.FlagSet) {
 	flags.StringVar(&opts.loadingRules.ExplicitPath, opts.which+"-kubeconfig", opts.loadingRules.ExplicitPath, "Path to the kubeconfig file to use for "+opts.description)
 	flags.StringVar(&opts.overrides.CurrentContext, opts.which+"-context", opts.overrides.CurrentContext, "The name of the kubeconfig context to use for "+opts.description)
