@@ -70,11 +70,11 @@ func removeWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
 	// set default context to "root"
 	rootClientOpts.SetDefaultCurrentContext("root")
 	// Make a new flag set named rmwds
-	fs := pflag.NewFlagSet("rmwds", pflag.ExitOnError)
+//	fs := pflag.NewFlagSet("rmwds", pflag.ExitOnError)
 	// Add cliOpts flags to fs (flow from syntax is confusing, goes -->)
-	cliOpts.AddFlags(fs)
+//	cliOpts.AddFlags(fs)
     // add fs to rootClientOpts
-    rootClientOpts.AddFlags(fs)
+//    rootClientOpts.AddFlags(fs)
 
     // Get client config from flags
     config, err := rootClientOpts.ToRESTConfig()

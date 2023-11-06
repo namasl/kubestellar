@@ -11,7 +11,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// sub-command for removing a location
+// Sub-command for removing a location.
+// The IMW is provided by the required --imw flag, and the location name is
+// given as a command line argument. The SyncTarget and Location object within
+// the IMW will be deleted.
 
 package remove
 
@@ -25,9 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/klog/v2"
-
-	//kcpclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
-	"github.com/kcp-dev/logicalcluster/v3"
 
 	clientopts "github.com/kubestellar/kubestellar/pkg/client-options"
 	clientset "github.com/kubestellar/kubestellar/pkg/client/clientset/versioned"
@@ -73,16 +73,10 @@ func removeLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 		logger.V(1).Info(fmt.Sprintf("Command line flag %s=%s", flg.Name, flg.Value))
 	})
 
-	// Fancy way of appending strings with a ":" between
-	imwPath := logicalcluster.Name("root").Path().Join(imw).String()
-
 	// Options for IMW workspace
 	imwClientOpts := clientopts.NewClientOpts("imw", "access to the IMW workspace")
 	// Set default context to "root"; we need to append the IMW name to the root server
 	imwClientOpts.SetDefaultCurrentContext("root")
-	// TODO how to get this?
-	//_ = imwClientOpts.GetClusterServer()
-//	imwClientOpts.SetClusterInfoServer("https://debian:1119/clusters/root:" + imw)
 
 	// Make a new flag set named rmloc
 //	fs := pflag.NewFlagSet("rmloc", pflag.ExitOnError)
@@ -91,7 +85,6 @@ func removeLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 	// add imwClientOpts to fs (flow from syntax is confusing, goes -->)
 //	imwClientOpts.AddFlags(fs)
 
-
 	// Get client config from flags
 	config, err := imwClientOpts.ToRESTConfig()
 	if err != nil {
@@ -99,45 +92,31 @@ func removeLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 		return err
 	}
 
+	// Update host to work on objects within IMW workspace
 	config.Host += ":" + imw
 
 	// Create client-go instance from config
-	//client, err := kcpclientset.NewForConfig(config)
 	client, err := clientset.NewForConfig(config)
 	if err != nil {
 		logger.Error(err, "Failed create client-go instance")
 		return err
 	}
 
-    // TODO remove thisline ************************************************************
-	fmt.Printf("REMOVE LOC %s, IMW=%s\n", locationName, imwPath)
-
-	fmt.Println("********************** GET **********************")
-	fmt.Println("********************** SyncTarget **********************")
-	st, err := client.EdgeV2alpha1().SyncTargets().Get(ctx, locationName, metav1.GetOptions{})
-	//err = client.EdgeV2alpha1().SyncTargets().Delete(ctx, locationName, metav1.DeleteOptions{})
+	// Delete the SyncTarget object
+	err = client.EdgeV2alpha1().SyncTargets().Delete(ctx, locationName, metav1.DeleteOptions{})
 	if err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to delete SyncTarget %s", locationName))
 		return err
 	}
-	fmt.Println(st)
+    logger.Info(fmt.Sprintf("Removed SyncTarget %s from workspace root:%s", locationName, imw))
 
-	fmt.Println("********************** GET **********************")
-	fmt.Println("********************** Location **********************")
-	loc, err := client.EdgeV2alpha1().Locations().Get(ctx, locationName, metav1.GetOptions{})
-	//err = client.EdgeV2alpha1().Locations().Delete(ctx, locationName, metav1.DeleteOptions{})
+	// Delete the Location object
+	err = client.EdgeV2alpha1().Locations().Delete(ctx, locationName, metav1.DeleteOptions{})
 	if err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to delete Location %s", locationName))
 		return err
 	}
-	fmt.Println(loc)
-
-
-	//kubectl "${kubectl_flags[@]}" delete synctargets.edge.kubestellar.io "$objname"
-	//kubectl "${kubectl_flags[@]}" delete locations.edge.kubestellar.io "$objname"
-
-	// clusters.cluster.server = https://debian:1119/clusters/root
-	// clusters.name: root
+    logger.Info(fmt.Sprintf("Removed Location %s from workspace root:%s", locationName, imw))
 
 	return nil
 }
