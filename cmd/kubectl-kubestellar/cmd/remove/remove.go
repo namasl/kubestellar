@@ -24,7 +24,6 @@ import (
     "github.com/spf13/pflag"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-    "k8s.io/klog/v2"
 )
 
 // Create Cobra sub-command for 'kubectl kubestellar remove'
@@ -55,15 +54,15 @@ func init() {
 	// Add cliOpts flags to fs (flow from syntax is confusing, goes -->)
 	cliOpts.AddFlags(fs)
     // Allow logging to pick up flags
-    klog.InitFlags(flag.CommandLine)
+//    klog.InitFlags(flag.CommandLine)
     // Add logging flags to fs
     fs.AddGoFlagSet(flag.CommandLine)
     // Add flags to our command; make these persistent (available to this
     // command and all sub-commands)
     RemoveCmd.PersistentFlags().AddFlagSet(fs)
 
-    // add location sub-command
+    // Add location sub-command
     RemoveCmd.AddCommand(newCmdRemoveLocation(cliOpts))
-    // add wds sub-command
+    // Add wds sub-command
     RemoveCmd.AddCommand(newCmdRemoveWds(cliOpts))
 }

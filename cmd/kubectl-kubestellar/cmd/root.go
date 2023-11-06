@@ -19,8 +19,13 @@ import (
 	"fmt"
 	"os"
 	"errors"
+	"flag"
 
 	"github.com/spf13/cobra"
+    "github.com/spf13/pflag"
+
+	"k8s.io/klog/v2"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 
 	"github.com/kubestellar/kubestellar/cmd/kubectl-kubestellar/cmd/ensure"
 	"github.com/kubestellar/kubestellar/cmd/kubectl-kubestellar/cmd/remove"
@@ -74,6 +79,25 @@ var completionCmd = &cobra.Command{
 
 // add sub-commands to root
 func init() {
+	// Get config flags with default values.
+    // Passing "true" will "use persistent client config, rest mapper,
+	// discovery client, and propagate them to the places that need them,
+	// rather than instantiating them multiple times."
+	cliOpts := genericclioptions.NewConfigFlags(true)
+	// Make a new flag set named en
+	fs := pflag.NewFlagSet("root", pflag.ExitOnError)
+	// Add cliOpts flags to fs (flow from syntax is confusing, goes -->)
+	cliOpts.AddFlags(fs)
+
+    // Allow logging to pick up flags
+    klog.InitFlags(flag.CommandLine)
+    // Add logging flags to fs
+    fs.AddGoFlagSet(flag.CommandLine)
+    // Add flags to our command; make these persistent (available to this
+    // command and all sub-commands)
+    rootCmd.PersistentFlags().AddFlagSet(fs)
+
+	// Add sub-commands
     rootCmd.AddCommand(ensure.EnsureCmd)
     rootCmd.AddCommand(remove.RemoveCmd)
     rootCmd.AddCommand(completionCmd)
