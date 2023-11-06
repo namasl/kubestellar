@@ -109,6 +109,7 @@ fi
 set -e
 
 echo "--- current directory is $PWD"
+# cwsi ends up being something like "root:wmw1"
 cwsi=$(kubectl ws "${kubectl_flags[@]}" .)
 cwsi=${cwsi#*'"'}; cwsi=${cwsi%'"'*}
 echo "current ws is $cwsi"
@@ -117,6 +118,7 @@ if [ "$imw" != "." ]
 then kubectl ws "${kubectl_flags[@]}" "$imw"
      cwsi=$imw
 fi
+# we are now in IMW
 echo "current cwsi is $cwsi"
 if ! kubectl "${kubectl_flags[@]}" get apibinding "edge.kubestellar.io" &> /dev/null; then
     kubectl kcp "${kubectl_flags[@]}" bind apiexport root:espw:edge.kubestellar.io
@@ -124,6 +126,7 @@ if ! kubectl "${kubectl_flags[@]}" get apibinding "edge.kubestellar.io" &> /dev/
 else echo "edge.kubestellar.io apibinding exists in workspace $cwsi"
 fi
 
+# check for SyncTarget, make one if doesn't exist
 if ! kubectl "${kubectl_flags[@]}" get synctargets.edge.kubestellar.io "$objname" &> /dev/null; then
 (cat <<EOF
 apiVersion: edge.kubestellar.io/v2alpha1
@@ -139,6 +142,7 @@ EOF
 }
 fi
 
+# check for Location, create if not exist
 if ! kubectl "${kubectl_flags[@]}" get locations.edge.kubestellar.io "$objname" &> /dev/null; then
 (cat <<EOF
 apiVersion: edge.kubestellar.io/v2alpha1
@@ -164,6 +168,8 @@ fi
 stlabs=$(kubectl "${kubectl_flags[@]}" get synctargets.edge.kubestellar.io  "$objname" -o json | jq .metadata.labels)
 loclabs=$(kubectl "${kubectl_flags[@]}" get locations.edge.kubestellar.io "$objname" -o json | jq .metadata.labels)
 
+
+# parse through stuff
 let index=0 1
 while (( index < ${#labels[*]} )); do
     key=${labels[index]}

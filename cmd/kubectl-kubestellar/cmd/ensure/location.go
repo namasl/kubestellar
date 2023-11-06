@@ -115,5 +115,77 @@ func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
     fmt.Println("LOC LOC LOC LOC LOC LOC")
     fmt.Println(location)
 
+
 	return nil
 }
+
+// go to IMW
+
+// check if API binding exists with
+// $ kubectl get apibinding "edge.kubestellar.io"
+// GET https://debian:1119/clusters/root:imw1/apis/apis.kcp.io/v1alpha1/apibindings/edge.kubestellar.io
+// if this does not exist, then do (https://docs.kcp.io/kcp/main/reference/crd/apibindings.apis.kcp.io/)
+// $ kubectl kcp bind apiexport root:espw:edge.kubestellar.io
+
+
+// check for SyncTarget... we already have this above
+// $ kubectl get synctargets.edge.kubestellar.io "$objname"
+// if that doesn't exist, then create one....
+//
+// (cat <<EOF
+// apiVersion: edge.kubestellar.io/v2alpha1
+// kind: SyncTarget
+// metadata:
+//   name: "$objname"
+//   labels:
+//     id: "$objname"
+// EOF
+// ) | kubectl "${kubectl_flags[@]}" create -f - || {
+//     echo "$0: Creation of SyncTarget failed" >&2
+//     exit 3
+// }
+
+
+// check for Location... we have this above
+// $ kubectl get locations.edge.kubestellar.io "$objname"
+// (cat <<EOF
+// apiVersion: edge.kubestellar.io/v2alpha1
+// kind: Location
+// spec:
+//   resource: {group: edge.kubestellar.io, version: v2alpha1, resource: synctargets}
+//   instanceSelector:
+//     matchLabels: {"id":"$objname"}
+// metadata:
+//   name: "$objname"
+// EOF
+// ) | kubectl "${kubectl_flags[@]}" create -f - || {
+//     echo "$0: Creation of SyncTarget failed" >&2
+//     exit 3
+// }
+// fi
+
+
+// see if Location named "default" exists, and delete if so
+// if kubectl get locations.edge.kubestellar.io default
+//     kubectl delete locations.edge.kubestellar.io default
+
+
+// bash variable stlabs=
+// $ kubectl get synctargets.edge.kubestellar.io ks-edge-cluster1 -o json | jq .metadata.labels
+// gives the result:
+// {
+//   "env": "ks-edge-cluster1",
+//   "id": "ks-edge-cluster1",
+//   "location-group": "edge"
+// }
+
+// bash variable loclabs=
+// $ kubectl get locations.edge.kubestellar.io ks-edge-cluster1 -o json | jq .metadata.labels
+// gives the result:
+// {
+//   "env": "ks-edge-cluster1",
+//   "location-group": "edge"
+// }
+
+
+// Make sure the given label exists for SyncTarget and Location
