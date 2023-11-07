@@ -12,6 +12,10 @@ limitations under the License.
 */
 
 // Sub-command for ensuring the existence and configuration a location in a WEC.
+// The IMW is provided by the required --imw flag.
+// The location name is provided as a required command line argument.
+// Optional key/value pairs are provided as command line arguments, for which
+// we will ensure that these exist as labels in the Location and SyncTarget.
 
 package ensure
 
@@ -61,6 +65,14 @@ func newCmdEnsureLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command
 // ....
 // The IMW name is provided by the --imw flag (stored in the "imw" string
 // variable), and the location name is a command line argument.
+// In this function we will:
+// - work in the provided IMW workspace
+// - check if APIBinding "edge.kubestellar.io" exists, create if not
+// - check for SyncTarget of provided name in IMW, create if not
+// - check for Location of provided name in IMW, create if not
+// - if Location "default" exists, delete it
+// - check that provided key/value pairs exist as labels in SyncTarget and Location
+// - check that SyncTarget has an "id" label matching the Location name
 func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string) error {
 	locationName := args[0]
 	ctx := context.Background()
@@ -94,13 +106,21 @@ func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 		return err
 	}
 
-	// Get the SyncTarget object
+	// Get the APIBinding
 	syncTarget, err := client.EdgeV2alpha1().SyncTargets().Get(ctx, locationName, metav1.GetOptions{})
 	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to get SyncTarget %s", locationName))
+		logger.Error(err, fmt.Sprintf("Failed to get SyncTarget %s in workspace root:%s", locationName, imw))
 		return err
 	}
     logger.Info(fmt.Sprintf("Found SyncTarget %s in workspace root:%s", locationName, imw))
+
+	// Get the SyncTarget object
+	apiBinding, err := client.EdgeV2alpha1().APIBinding().Get(ctx, locationName, metav1.GetOptions{})
+	if err != nil {
+		logger.Error(err, fmt.Sprintf("Failed to get APIBinding %s in workspace root:%s", locationName, imw))
+		return err
+	}
+    logger.Info(fmt.Sprintf("Found APIBinding %s in workspace root:%s", locationName, imw))
 
 	// Get the Location object
 	location, err := client.EdgeV2alpha1().Locations().Get(ctx, locationName, metav1.GetOptions{})

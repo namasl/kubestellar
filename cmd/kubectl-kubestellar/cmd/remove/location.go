@@ -106,7 +106,7 @@ func removeLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 	// Delete the SyncTarget object
 	err = client.EdgeV2alpha1().SyncTargets().Delete(ctx, locationName, metav1.DeleteOptions{})
 	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to delete SyncTarget %s", locationName))
+		logger.Error(err, fmt.Sprintf("Failed to delete SyncTarget %s from workspace root:%s", locationName, imw))
 		return err
 	}
     logger.Info(fmt.Sprintf("Removed SyncTarget %s from workspace root:%s", locationName, imw))
@@ -114,7 +114,7 @@ func removeLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 	// Delete the Location object
 	err = client.EdgeV2alpha1().Locations().Delete(ctx, locationName, metav1.DeleteOptions{})
 	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to delete Location %s", locationName))
+		logger.Error(err, fmt.Sprintf("Failed to delete Location %s from workspace root:%s", locationName, imw))
 		return err
 	}
     logger.Info(fmt.Sprintf("Removed Location %s from workspace root:%s", locationName, imw))

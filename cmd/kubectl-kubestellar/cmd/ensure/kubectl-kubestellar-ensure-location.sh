@@ -109,7 +109,7 @@ fi
 set -e
 
 echo "--- current directory is $PWD"
-# cwsi ends up being something like "root:wmw1"
+# cwsi ends up being something like "root:imw1"
 cwsi=$(kubectl ws "${kubectl_flags[@]}" .)
 cwsi=${cwsi#*'"'}; cwsi=${cwsi%'"'*}
 echo "current ws is $cwsi"
