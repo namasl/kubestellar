@@ -14,7 +14,7 @@ limitations under the License.
 // Sub-command for ensuring the existence and configuration a location in a WEC.
 // The IMW is provided by the required --imw flag.
 // The location name is provided as a required command line argument.
-// Optional key/value pairs are provided as command line arguments, for which
+// Optional key=value pairs are provided as command line arguments, for which
 // we will ensure that these exist as labels in the Location and SyncTarget.
 
 package ensure
@@ -64,9 +64,9 @@ func newCmdEnsureLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command
 }
 
 
-// ....
 // The IMW name is provided by the --imw flag (stored in the "imw" string
 // variable), and the location name is a command line argument.
+// Labels to check are provided as additional arguments in key=value pairs.
 // In this function we will:
 // - work in the provided IMW workspace
 // - check if APIBinding "edge.kubestellar.io" exists in IMW, create if not
