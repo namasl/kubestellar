@@ -30,6 +30,8 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/klog/v2"
 
+	kcpclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
+
 	clientopts "github.com/kubestellar/kubestellar/pkg/client-options"
 	clientset "github.com/kubestellar/kubestellar/pkg/client/clientset/versioned"
 )
@@ -67,7 +69,7 @@ func newCmdEnsureLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command
 // variable), and the location name is a command line argument.
 // In this function we will:
 // - work in the provided IMW workspace
-// - check if APIBinding "edge.kubestellar.io" exists, create if not
+// - check if APIBinding "edge.kubestellar.io" exists in IMW, create if not
 // - check for SyncTarget of provided name in IMW, create if not
 // - check for Location of provided name in IMW, create if not
 // - if Location "default" exists, delete it
@@ -99,6 +101,21 @@ func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 	config.Host += ":" + imw
 	logger.V(1).Info(fmt.Sprintf("Set host to %s", config.Host))
 
+    // Create client-go instance from config
+    kcpClient, err := kcpclientset.NewForConfig(config)
+	if err != nil {
+		logger.Error(err, "Failed create client-go instance")
+		return err
+	}
+
+	// Get the APIBinding
+	apiBinding, err := kcpClient.ApisV1alpha1().APIBindings().Get(ctx, "edge.kubestellar.io", metav1.GetOptions{})
+	if err != nil {
+		logger.Error(err, fmt.Sprintf("Failed to get APIBinding edge.kubestellar.io in workspace root:%s", imw))
+		return err
+	}
+    logger.Info(fmt.Sprintf("Found APIBinding edge.kubestellar.io in workspace root:%s", imw))
+
 	// Create client-go instance from config
 	client, err := clientset.NewForConfig(config)
 	if err != nil {
@@ -106,21 +123,13 @@ func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 		return err
 	}
 
-	// Get the APIBinding
+	// Get the SyncTarget object
 	syncTarget, err := client.EdgeV2alpha1().SyncTargets().Get(ctx, locationName, metav1.GetOptions{})
 	if err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to get SyncTarget %s in workspace root:%s", locationName, imw))
 		return err
 	}
     logger.Info(fmt.Sprintf("Found SyncTarget %s in workspace root:%s", locationName, imw))
-
-	// Get the SyncTarget object
-	apiBinding, err := client.EdgeV2alpha1().APIBinding().Get(ctx, locationName, metav1.GetOptions{})
-	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to get APIBinding %s in workspace root:%s", locationName, imw))
-		return err
-	}
-    logger.Info(fmt.Sprintf("Found APIBinding %s in workspace root:%s", locationName, imw))
 
 	// Get the Location object
 	location, err := client.EdgeV2alpha1().Locations().Get(ctx, locationName, metav1.GetOptions{})
@@ -130,6 +139,8 @@ func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 	}
     logger.Info(fmt.Sprintf("Found Location %s in workspace root:%s", locationName, imw))
 
+    fmt.Println("API API API API API")
+    fmt.Println(apiBinding)
     fmt.Println("ST ST ST ST ST ST ST")
     fmt.Println(syncTarget)
     fmt.Println("LOC LOC LOC LOC LOC LOC")
