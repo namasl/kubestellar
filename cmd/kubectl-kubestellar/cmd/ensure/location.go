@@ -73,7 +73,7 @@ func newCmdEnsureLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command
 // - check for SyncTarget of provided name in IMW, create if not
 // - check for Location of provided name in IMW, create if not
 // - if Location "default" exists, delete it
-// - check that provided key/value pairs exist as labels in SyncTarget and Location
+// - check that provided key=value pairs exist as labels in SyncTarget and Location
 // - check that SyncTarget has an "id" label matching the Location name
 func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string) error {
 	locationName := args[0]
@@ -108,13 +108,11 @@ func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 		return err
 	}
 
-	// Get the APIBinding
-	apiBinding, err := kcpClient.ApisV1alpha1().APIBindings().Get(ctx, "edge.kubestellar.io", metav1.GetOptions{})
+	// Check that APIBinding exists, create if not
+	err = verifyOrCreateAPIBinding(kcpClient, ctx, logger)
 	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to get APIBinding edge.kubestellar.io in workspace root:%s", imw))
 		return err
 	}
-    logger.Info(fmt.Sprintf("Found APIBinding edge.kubestellar.io in workspace root:%s", imw))
 
 	// Create client-go instance from config
 	client, err := clientset.NewForConfig(config)
@@ -123,30 +121,90 @@ func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 		return err
 	}
 
+	// Check that SyncTarget exists, create if not
+	err = verifyOrCreateSyncTarget(client, ctx, logger, locationName, imw)
+	if err != nil {
+		return err
+	}
+
+
+	// Check if Location exists; if not, create one
+	err = verifyOrCreateLocation(client, ctx, logger, locationName, imw)
+	if err != nil {
+		return err
+	}
+
+	// Check if "default" Location exists, and delete it if so
+	err = verifyNoDefaultLocation(client, ctx, logger, imw)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Check if APIBinding exists; if not, create one.
+func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Context, logger klog.Logger) error {
+	// Get the APIBinding
+	_, err := client.ApisV1alpha1().APIBindings().Get(ctx, "edge.kubestellar.io", metav1.GetOptions{})
+	if err == nil {
+    	logger.Info(fmt.Sprintf("Found APIBinding edge.kubestellar.io in workspace root:%s", imw))
+		return nil
+	}
+	// APIBinding does not exist, must create
+	logger.Info(fmt.Sprintf("No APIBinding edge.kubestellar.io in workspace root:%s", imw))
+
+	return nil
+}
+
+// Check if SyncTarget exists; if not, create one
+func verifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName, imw string) error {
 	// Get the SyncTarget object
-	syncTarget, err := client.EdgeV2alpha1().SyncTargets().Get(ctx, locationName, metav1.GetOptions{})
-	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to get SyncTarget %s in workspace root:%s", locationName, imw))
-		return err
+	_, err := client.EdgeV2alpha1().SyncTargets().Get(ctx, locationName, metav1.GetOptions{})
+	if err == nil {
+		logger.Info(fmt.Sprintf("Found SyncTarget %s in workspace root:%s", locationName, imw))
+		// Check that SyncTarget has an "id" label matching locationName
+		// Check that SyncTarget has user provided key=value pairs
+		return nil
 	}
-    logger.Info(fmt.Sprintf("Found SyncTarget %s in workspace root:%s", locationName, imw))
+	// SyncTarget does not exist, must create
+	logger.Info(fmt.Sprintf("No SyncTarget %s in workspace root:%s, creating it", locationName, imw))
 
+	return nil
+}
+
+// Check if Location exists; if not, create one
+func verifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName, imw string) error {
 	// Get the Location object
-	location, err := client.EdgeV2alpha1().Locations().Get(ctx, locationName, metav1.GetOptions{})
+	_, err := client.EdgeV2alpha1().Locations().Get(ctx, locationName, metav1.GetOptions{})
+	if err == nil {
+		logger.Info(fmt.Sprintf("Found Location %s in workspace root:%s", locationName, imw))
+		// Check that Location has user provided key=value pairs
+		return nil
+	}
+	// Location does not exist, must create
+	logger.Info(fmt.Sprintf("No Location %s in workspace root:%s, creating it", locationName, imw))
+
+	return nil
+}
+
+// Check if default Location exists, delete it if so
+func verifyNoDefaultLocation(client *clientset.Clientset, ctx context.Context, logger klog.Logger, imw string) error {
+	// Check for "default" Location object
+	_, err := client.EdgeV2alpha1().Locations().Get(ctx, "default", metav1.GetOptions{})
 	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to get Location %s", locationName))
+		logger.Info(fmt.Sprintf("Verified no default Location in workspace root:%s", imw))
+		// Check that Location has user provided key=value pairs
+		return nil
+	}
+	// "default" Location exists, delete it
+	logger.Info(fmt.Sprintf("Found default Location in workspace root:%s, deleting it", imw))
+	err = client.EdgeV2alpha1().Locations().Delete(ctx, "default", metav1.DeleteOptions{})
+	if err != nil {
+		logger.Error(err, fmt.Sprintf("Failed to delete default Location in workspace root:%s", imw))
+		// Check that Location has user provided key=value pairs
 		return err
 	}
-    logger.Info(fmt.Sprintf("Found Location %s in workspace root:%s", locationName, imw))
-
-    fmt.Println("API API API API API")
-    fmt.Println(apiBinding)
-    fmt.Println("ST ST ST ST ST ST ST")
-    fmt.Println(syncTarget)
-    fmt.Println("LOC LOC LOC LOC LOC LOC")
-    fmt.Println(location)
-
-
 	return nil
 }
 
