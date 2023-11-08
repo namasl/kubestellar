@@ -169,6 +169,12 @@ func checkLabelArgs(labels []string, logger klog.Logger) error {
 		}
 		// Make sure the key and value contain only valid characters
 
+    //  "$key" =~ ^[a-zA-Z0-9][a-zA-Z0-9_./-]*$ 
+	// key, must match '^[a-zA-Z0-9][a-zA-Z0-9_./-]*$' and Kubernetes restrictions
+
+    //  "$val" =~ ^[a-zA-Z0-9]([a-zA-Z0-9_.-]{0,61}[a-zA-Z0-9])?$ 
+	// value, must match '^[a-zA-Z0-9]([a-zA-Z0-9_.-]{0,61}[a-zA-Z0-9])?$'
+
 	}
 	return nil
 }
