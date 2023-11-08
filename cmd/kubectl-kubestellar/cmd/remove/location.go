@@ -75,7 +75,7 @@ func removeLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 
 	// Options for IMW workspace
 	imwClientOpts := clientopts.NewClientOpts("imw", "access to the IMW workspace")
-	// Set default context to "root"; we need to append the IMW name to the root server
+	// Set default context to "root"; we will need to append the IMW name to the root server
 	imwClientOpts.SetDefaultCurrentContext("root")
 
 	// Make a new flag set named rmloc
