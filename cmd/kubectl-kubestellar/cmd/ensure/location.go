@@ -28,6 +28,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	//"k8s.io/client-go/tools/reference"
 	"k8s.io/klog/v2"
 
 	v1alpha1 "github.com/kcp-dev/kcp/pkg/apis/apis/v1alpha1"
@@ -63,7 +64,6 @@ func newCmdEnsureLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command
 	cmdLocation.MarkFlagRequired("imw")
 	return cmdLocation
 }
-
 
 // The IMW name is provided by the --imw flag (stored in the "imw" string
 // variable), and the location name is a command line argument.
@@ -155,9 +155,30 @@ func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Contex
 	// APIBinding does not exist, must create
 	logger.Info(fmt.Sprintf("No APIBinding edge.kubestellar.io in workspace root:%s", imw))
 
-	var aPIBinding *v1alpha1.APIBinding
+	// kubectl kcp bind apiexport root:espw:edge.kubestellar.io
 
-	_, err = client.ApisV1alpha1().APIBindings().Create(ctx, aPIBinding, metav1.CreateOptions{})
+
+	apiBinding := v1alpha1.APIBinding {
+		TypeMeta: metav1.TypeMeta {
+			Kind: "apis.kcp.io/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta {
+			Name: "edge.kubestellar.io",
+		},
+		Spec: v1alpha1.APIBindingSpec {
+			Reference: v1alpha1.BindingReference {
+					Export: &v1alpha1.ExportBindingReference {
+						Name: "edge.kubestellar.io",
+						Path: "root:espw",
+				},
+			},
+		},
+	}
+	fmt.Println(apiBinding)
+	//apiBinding.Spec.Reference.Export.Name = "edge.kubestellar.io"
+	//apiBinding.Spec.Reference.Export.Path = "root:espw"
+
+	_, err = client.ApisV1alpha1().APIBindings().Create(ctx, &apiBinding, metav1.CreateOptions{})
 	if err != nil {
     	logger.Error(err, fmt.Sprintf("Failed to create APIBinding in workspace root:%s", imw))
 		return err
@@ -223,15 +244,11 @@ func verifyNoDefaultLocation(client *clientset.Clientset, ctx context.Context, l
 	return nil
 }
 
-// go to IMW
-
-// check if API binding exists with
-// $ kubectl get apibinding "edge.kubestellar.io"
-// GET https://debian:1119/clusters/root:imw1/apis/apis.kcp.io/v1alpha1/apibindings/edge.kubestellar.io
+// make API binding
 // if this does not exist, then do (https://docs.kcp.io/kcp/main/reference/crd/apibindings.apis.kcp.io/)
 // $ kubectl kcp bind apiexport root:espw:edge.kubestellar.io
-
-
+//
+//
 // check for SyncTarget... we already have this above
 // $ kubectl get synctargets.edge.kubestellar.io "$objname"
 // if that doesn't exist, then create one....
@@ -248,8 +265,8 @@ func verifyNoDefaultLocation(client *clientset.Clientset, ctx context.Context, l
 //     echo "$0: Creation of SyncTarget failed" >&2
 //     exit 3
 // }
-
-
+//
+//
 // check for Location... we have this above
 // $ kubectl get locations.edge.kubestellar.io "$objname"
 // (cat <<EOF
@@ -267,13 +284,8 @@ func verifyNoDefaultLocation(client *clientset.Clientset, ctx context.Context, l
 //     exit 3
 // }
 // fi
-
-
-// see if Location named "default" exists, and delete if so
-// if kubectl get locations.edge.kubestellar.io default
-//     kubectl delete locations.edge.kubestellar.io default
-
-
+//
+//
 // bash variable stlabs=
 // $ kubectl get synctargets.edge.kubestellar.io ks-edge-cluster1 -o json | jq .metadata.labels
 // gives the result:
@@ -282,7 +294,7 @@ func verifyNoDefaultLocation(client *clientset.Clientset, ctx context.Context, l
 //   "id": "ks-edge-cluster1",
 //   "location-group": "edge"
 // }
-
+//
 // bash variable loclabs=
 // $ kubectl get locations.edge.kubestellar.io ks-edge-cluster1 -o json | jq .metadata.labels
 // gives the result:
@@ -290,13 +302,14 @@ func verifyNoDefaultLocation(client *clientset.Clientset, ctx context.Context, l
 //   "env": "ks-edge-cluster1",
 //   "location-group": "edge"
 // }
-
+//
+//
 // for SyncTarget/Location outputs above, make sure labelname=labelvalue pairs
 // given at the command line match what is in the output. If not, overwrite them with
 // kubectl label --overwrite synctargets.edge.kubestellar.io "$objname" "${key}=${val}"
 // or
 // kubectl label --overwrite locations.edge.kubestellar.io "$objname" "${key}=${val}"
-
-
+//
+//
 // Not done in Bash script, but can also make sure the SyncTarget has the
 // label "id" = objname
