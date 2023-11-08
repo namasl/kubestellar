@@ -22,6 +22,8 @@ package ensure
 import (
 	"context"
 	"fmt"
+	"strings"
+	"errors"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -41,14 +43,14 @@ import (
 
 var imw string // IMW workspace path
 
-// Create the Cobra sub-command for 'kubectl kubestellar remove location'
+// Create the Cobra sub-command for 'kubectl kubestellar ensure location'
 func newCmdEnsureLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 	// Make location command
 	cmdLocation := &cobra.Command{
-		Use:     "location --imw <IMW_NAME> <LOCATION_NAME>",
+		Use:     "location --imw <IMW_NAME> <LOCATION_NAME> [\"KEY=VALUE\" ...]",
 		Aliases: []string{"loc"},
 		Short:   "Ensure existence and configuration of an inventory listing for a WEC",
-		Args:    cobra.ExactArgs(1),
+		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// At this point set silence usage to true, so that any errors
 			// following do not result in the help being printed. We only
@@ -73,14 +75,21 @@ func newCmdEnsureLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command
 // - work in the provided IMW workspace
 // - check if APIBinding "edge.kubestellar.io" exists in IMW, create if not
 // - check for SyncTarget of provided name in IMW, create if not
+// - check that SyncTarget has an "id" label matching the Location name
 // - check for Location of provided name in IMW, create if not
 // - if Location "default" exists, delete it
 // - check that provided key=value pairs exist as labels in SyncTarget and Location
-// - check that SyncTarget has an "id" label matching the Location name
 func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string) error {
 	locationName := args[0]
+	labels := args[1:]
 	ctx := context.Background()
 	logger := klog.FromContext(ctx)
+
+	// Make sure user provided labels are valid
+	err := checkLabelArgs(labels, logger)
+	if err != nil {
+		return err
+	}
 
 	// Print all flags and their values if verbosity level is at least 1
 	cmdLocation.Flags().VisitAll(func(flg *pflag.Flag) {
@@ -123,15 +132,14 @@ func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 		return err
 	}
 
-	// Check that SyncTarget exists, create if not
-	err = verifyOrCreateSyncTarget(client, ctx, logger, locationName)
+	// Check that SyncTarget exists and is configured, create/update if not
+	err = verifyOrCreateSyncTarget(client, ctx, logger, locationName, labels)
 	if err != nil {
 		return err
 	}
 
-
-	// Check if Location exists; if not, create one
-	err = verifyOrCreateLocation(client, ctx, logger, locationName)
+	// Check if Location exists and is configured, create/update if not
+	err = verifyOrCreateLocation(client, ctx, logger, locationName, labels)
 	if err != nil {
 		return err
 	}
@@ -142,6 +150,26 @@ func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 		return err
 	}
 
+	return nil
+}
+
+// Verify that user provided key=value arguments are valid
+func checkLabelArgs(labels []string, logger klog.Logger) error {
+	// Iterate over labels
+	for _, labelString := range labels {
+		// Ensure the raw string contains a =
+		if !strings.Contains(labelString, "=") {
+			return errors.New(fmt.Sprintf("Invalid label: %s", labelString))
+		}
+		// Split substring on =
+		labelSlice := strings.Split(labelString, "=")
+		// We should have only a key and value now
+		if len(labelSlice) != 2 {
+			return errors.New(fmt.Sprintf("Invalid label: %s", labelString))
+		}
+		// Make sure the key and value contain only valid characters
+
+	}
 	return nil
 }
 
@@ -183,13 +211,14 @@ func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Contex
 }
 
 // Check if SyncTarget exists; if not, create one
-func verifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string) error {
+func verifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string, labels []string) error {
 	// Get the SyncTarget object
 	syncTarget, err := client.EdgeV2alpha1().SyncTargets().Get(ctx, locationName, metav1.GetOptions{})
 	if err == nil {
 		logger.Info(fmt.Sprintf("Found SyncTarget %s in workspace root:%s", locationName, imw))
 		// Check that SyncTarget has an "id" label matching locationName
 		return verifySyncTargetId(syncTarget, client, ctx, logger, locationName)
+	// TODO is converting err to a string the right way to check this?
 	} else if err.Error() != fmt.Sprintf("synctargets.edge.kubestellar.io \"%s\" not found", locationName) {
 		// Some error other than a non-existant SyncTarget
 		logger.Info(fmt.Sprintf("Problem checking for SyncTarget %s in workspace root:%s", locationName, imw))
@@ -207,6 +236,14 @@ func verifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, 
 			Name: locationName,
 			Labels: map[string]string{"id": locationName},
 		},
+	}
+	// Add any provided labels
+	for _, labelString := range labels {
+		// split raw label string into key and value
+		labelSlice := strings.Split(labelString, "=")
+		key := labelSlice[0]
+		value := labelSlice[1]
+		syncTarget.ObjectMeta.Labels[key] = value
 	}
 	_, err = client.EdgeV2alpha1().SyncTargets().Create(ctx, syncTarget, metav1.CreateOptions{})
 	if err != nil {
@@ -245,13 +282,14 @@ func verifySyncTargetId(syncTarget *v2alpha1.SyncTarget, client *clientset.Clien
 }
 
 // Check if Location exists; if not, create one
-func verifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string) error {
+func verifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string, labels []string) error {
 	// Get the Location object
 	_, err := client.EdgeV2alpha1().Locations().Get(ctx, locationName, metav1.GetOptions{})
 	if err == nil {
 		logger.Info(fmt.Sprintf("Found Location %s in workspace root:%s", locationName, imw))
-		// Check that Location has user provided key=value pairs
+
 		return nil
+	// TODO is converting err to a string the right way to check this?
 	} else if err.Error() != fmt.Sprintf("locations.edge.kubestellar.io \"%s\" not found", locationName) {
 		// Some error other than a non-existant SyncTarget
 		logger.Info(fmt.Sprintf("Problem checking for Location %s in workspace root:%s", locationName, imw))
@@ -278,6 +316,20 @@ func verifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, lo
 				MatchLabels: map[string]string{"id": locationName},
 			},
 		},
+	}
+	// Add any provided labels
+	for _, labelString := range labels {
+		// split raw label string into key and value
+		labelSlice := strings.Split(labelString, "=")
+		key := labelSlice[0]
+		value := labelSlice[1]
+		if location.ObjectMeta.Labels != nil {
+			// Add key=value
+			location.ObjectMeta.Labels[key] = value
+		} else {
+			// No labels exist yet, add the labels map along with this key=value
+			location.ObjectMeta.Labels = map[string]string{key: value}
+		}
 	}
 	_, err = client.EdgeV2alpha1().Locations().Create(ctx, &location, metav1.CreateOptions{})
 	if err != nil {
@@ -316,6 +368,9 @@ func verifyNoDefaultLocation(client *clientset.Clientset, ctx context.Context, l
 
 
 
+	// Check that SyncTarget has user provided key=value pairs
+	// Check that Location has user provided key=value pairs
+
 // bash variable stlabs=
 // $ kubectl get synctargets.edge.kubestellar.io ks-edge-cluster1 -o json | jq .metadata.labels
 // gives the result:
@@ -333,13 +388,10 @@ func verifyNoDefaultLocation(client *clientset.Clientset, ctx context.Context, l
 //   "location-group": "edge"
 // }
 //
+// **** Locations might not have a metadata.labels, so must create if nil
 //
 // for SyncTarget/Location outputs above, make sure labelname=labelvalue pairs
 // given at the command line match what is in the output. If not, overwrite them with
 // kubectl label --overwrite synctargets.edge.kubestellar.io "$objname" "${key}=${val}"
 // or
 // kubectl label --overwrite locations.edge.kubestellar.io "$objname" "${key}=${val}"
-//
-//
-// Not done in Bash script, but can also make sure the SyncTarget has the
-// label "id" = objname
