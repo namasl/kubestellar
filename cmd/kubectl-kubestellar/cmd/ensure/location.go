@@ -34,6 +34,7 @@ import (
 	v1alpha1 "github.com/kcp-dev/kcp/pkg/apis/apis/v1alpha1"
 	kcpclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
 
+	v2alpha1 "github.com/kubestellar/kubestellar/pkg/apis/edge/v2alpha1"
 	clientopts "github.com/kubestellar/kubestellar/pkg/client-options"
 	clientset "github.com/kubestellar/kubestellar/pkg/client/clientset/versioned"
 )
@@ -152,11 +153,9 @@ func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Contex
     	logger.Info(fmt.Sprintf("Found APIBinding edge.kubestellar.io in workspace root:%s", imw))
 		return nil
 	}
+
 	// APIBinding does not exist, must create
 	logger.Info(fmt.Sprintf("No APIBinding edge.kubestellar.io in workspace root:%s", imw))
-
-	// kubectl kcp bind apiexport root:espw:edge.kubestellar.io
-
 
 	apiBinding := v1alpha1.APIBinding {
 		TypeMeta: metav1.TypeMeta {
@@ -174,10 +173,6 @@ func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Contex
 			},
 		},
 	}
-	fmt.Println(apiBinding)
-	//apiBinding.Spec.Reference.Export.Name = "edge.kubestellar.io"
-	//apiBinding.Spec.Reference.Export.Path = "root:espw"
-
 	_, err = client.ApisV1alpha1().APIBindings().Create(ctx, &apiBinding, metav1.CreateOptions{})
 	if err != nil {
     	logger.Error(err, fmt.Sprintf("Failed to create APIBinding in workspace root:%s", imw))
@@ -188,6 +183,12 @@ func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Contex
 }
 
 // Check if SyncTarget exists; if not, create one
+// apiVersion: edge.kubestellar.io/v2alpha1
+// kind: SyncTarget
+// metadata:
+//   name: "$objname"
+//   labels:
+//     id: "$objname"
 func verifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string) error {
 	// Get the SyncTarget object
 	_, err := client.EdgeV2alpha1().SyncTargets().Get(ctx, locationName, metav1.GetOptions{})
@@ -200,9 +201,33 @@ func verifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, 
 	// SyncTarget does not exist, must create
 	logger.Info(fmt.Sprintf("No SyncTarget %s in workspace root:%s, creating it", locationName, imw))
 
+	syncTarget := v2alpha1.SyncTarget {
+		TypeMeta: metav1.TypeMeta {
+			Kind: "SyncTarget",
+			APIVersion: "edge.kubestellar.io/v2alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta {
+			Name: locationName,
+			Labels: map[string]string{"id": locationName},
+		},
+	}
+	_, err = client.EdgeV2alpha1().SyncTargets().Create(ctx, &syncTarget, metav1.CreateOptions{})
+	if err != nil {
+		logger.Info(fmt.Sprintf("Failed to create SyncTarget %s in workspace root:%s", locationName, imw))
+		return err
+	}
+
 	return nil
 }
 
+// apiVersion: edge.kubestellar.io/v2alpha1
+// kind: Location
+// spec:
+//   resource: {group: edge.kubestellar.io, version: v2alpha1, resource: synctargets}
+//   instanceSelector:
+//     matchLabels: {"id":"$objname"}
+// metadata:
+//   name: "$objname"
 // Check if Location exists; if not, create one
 func verifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string) error {
 	// Get the Location object
@@ -214,6 +239,31 @@ func verifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, lo
 	}
 	// Location does not exist, must create
 	logger.Info(fmt.Sprintf("No Location %s in workspace root:%s, creating it", locationName, imw))
+
+	location := v2alpha1.Location {
+		TypeMeta: metav1.TypeMeta {
+			Kind: "Location",
+			APIVersion: "edge.kubestellar.io/v2alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta {
+			Name: locationName,
+		},
+		Spec: v2alpha1.LocationSpec {
+			Resource: v2alpha1.GroupVersionResource {
+				Group: "edge.kubestellar.io",
+				Version: "v2alpha1",
+				Resource: "synctargets",
+			},
+			InstanceSelector: &metav1.LabelSelector {
+				MatchLabels: map[string]string{"id": locationName},
+			},
+		},
+	}
+	_, err = client.EdgeV2alpha1().Locations().Create(ctx, &location, metav1.CreateOptions{})
+	if err != nil {
+		logger.Info(fmt.Sprintf("Failed to create SyncTarget %s in workspace root:%s", locationName, imw))
+		return err
+	}
 
 	return nil
 }
@@ -244,48 +294,8 @@ func verifyNoDefaultLocation(client *clientset.Clientset, ctx context.Context, l
 	return nil
 }
 
-// make API binding
-// if this does not exist, then do (https://docs.kcp.io/kcp/main/reference/crd/apibindings.apis.kcp.io/)
-// $ kubectl kcp bind apiexport root:espw:edge.kubestellar.io
-//
-//
-// check for SyncTarget... we already have this above
-// $ kubectl get synctargets.edge.kubestellar.io "$objname"
-// if that doesn't exist, then create one....
-//
-// (cat <<EOF
-// apiVersion: edge.kubestellar.io/v2alpha1
-// kind: SyncTarget
-// metadata:
-//   name: "$objname"
-//   labels:
-//     id: "$objname"
-// EOF
-// ) | kubectl "${kubectl_flags[@]}" create -f - || {
-//     echo "$0: Creation of SyncTarget failed" >&2
-//     exit 3
-// }
-//
-//
-// check for Location... we have this above
-// $ kubectl get locations.edge.kubestellar.io "$objname"
-// (cat <<EOF
-// apiVersion: edge.kubestellar.io/v2alpha1
-// kind: Location
-// spec:
-//   resource: {group: edge.kubestellar.io, version: v2alpha1, resource: synctargets}
-//   instanceSelector:
-//     matchLabels: {"id":"$objname"}
-// metadata:
-//   name: "$objname"
-// EOF
-// ) | kubectl "${kubectl_flags[@]}" create -f - || {
-//     echo "$0: Creation of SyncTarget failed" >&2
-//     exit 3
-// }
-// fi
-//
-//
+
+
 // bash variable stlabs=
 // $ kubectl get synctargets.edge.kubestellar.io ks-edge-cluster1 -o json | jq .metadata.labels
 // gives the result:
