@@ -189,17 +189,7 @@ func verifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, 
 	if err == nil {
 		logger.Info(fmt.Sprintf("Found SyncTarget %s in workspace root:%s", locationName, imw))
 		// Check that SyncTarget has an "id" label matching locationName
-		if syncTarget.ObjectMeta.Labels == nil {
-			logger.Info(fmt.Sprintf("SyncTarget %s is missing labels, adding 'id'", locationName))
-			syncTarget.ObjectMeta.Labels = map[string]string{"id": locationName}
-			return nil
-		}
-		id := syncTarget.ObjectMeta.Labels["id"]
-		if id != locationName {
-			logger.Info(fmt.Sprintf("SyncTarget %s 'id' label is '%s', changing to '%s'", locationName, id, locationName))
-			syncTarget.ObjectMeta.Labels["id"] = locationName
-		}
-		return nil
+		return verifySyncTargetId(syncTarget, client, ctx, logger, locationName)
 	} else if err.Error() != fmt.Sprintf("synctargets.edge.kubestellar.io \"%s\" not found", locationName) {
 		// Some error other than a non-existant SyncTarget
 		logger.Info(fmt.Sprintf("Problem checking for SyncTarget %s in workspace root:%s", locationName, imw))
@@ -221,6 +211,33 @@ func verifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, 
 	_, err = client.EdgeV2alpha1().SyncTargets().Create(ctx, syncTarget, metav1.CreateOptions{})
 	if err != nil {
 		logger.Info(fmt.Sprintf("Failed to create SyncTarget %s in workspace root:%s", locationName, imw))
+		return err
+	}
+
+	return nil
+}
+
+// Make sure the SyncTarget has an id label matching locationName (update if not)
+func verifySyncTargetId(syncTarget *v2alpha1.SyncTarget, client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string) error {
+	if syncTarget.ObjectMeta.Labels != nil {
+		id := syncTarget.ObjectMeta.Labels["id"]
+		if id == locationName {
+			// id matches locationName, all good
+			return nil
+		}
+		// ID label does not match locationName, update it
+		logger.Info(fmt.Sprintf("SyncTarget %s 'id' label is '%s', changing to '%s'", locationName, id, locationName))
+		syncTarget.ObjectMeta.Labels["id"] = locationName
+	} else {
+		// There are no labels, create it with id: locationName
+		logger.Info(fmt.Sprintf("SyncTarget %s is missing labels, adding 'id'", locationName))
+		syncTarget.ObjectMeta.Labels = map[string]string{"id": locationName}
+	}
+
+	// Apply updates to SyncTarget
+	_, err := client.EdgeV2alpha1().SyncTargets().Update(ctx, syncTarget, metav1.UpdateOptions{})
+	if err != nil {
+		logger.Info(fmt.Sprintf("Failed to update SyncTarget %s in workspace root:%s", locationName, imw))
 		return err
 	}
 
