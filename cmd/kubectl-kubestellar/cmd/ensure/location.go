@@ -30,6 +30,7 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/klog/v2"
 
+	v1alpha1 "github.com/kcp-dev/kcp/pkg/apis/apis/v1alpha1"
 	kcpclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
 
 	clientopts "github.com/kubestellar/kubestellar/pkg/client-options"
@@ -122,20 +123,20 @@ func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 	}
 
 	// Check that SyncTarget exists, create if not
-	err = verifyOrCreateSyncTarget(client, ctx, logger, locationName, imw)
+	err = verifyOrCreateSyncTarget(client, ctx, logger, locationName)
 	if err != nil {
 		return err
 	}
 
 
 	// Check if Location exists; if not, create one
-	err = verifyOrCreateLocation(client, ctx, logger, locationName, imw)
+	err = verifyOrCreateLocation(client, ctx, logger, locationName)
 	if err != nil {
 		return err
 	}
 
 	// Check if "default" Location exists, and delete it if so
-	err = verifyNoDefaultLocation(client, ctx, logger, imw)
+	err = verifyNoDefaultLocation(client, ctx, logger)
 	if err != nil {
 		return err
 	}
@@ -154,11 +155,19 @@ func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Contex
 	// APIBinding does not exist, must create
 	logger.Info(fmt.Sprintf("No APIBinding edge.kubestellar.io in workspace root:%s", imw))
 
+	var aPIBinding *v1alpha1.APIBinding
+
+	_, err = client.ApisV1alpha1().APIBindings().Create(ctx, aPIBinding, metav1.CreateOptions{})
+	if err != nil {
+    	logger.Error(err, fmt.Sprintf("Failed to create APIBinding in workspace root:%s", imw))
+		return err
+	}
+
 	return nil
 }
 
 // Check if SyncTarget exists; if not, create one
-func verifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName, imw string) error {
+func verifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string) error {
 	// Get the SyncTarget object
 	_, err := client.EdgeV2alpha1().SyncTargets().Get(ctx, locationName, metav1.GetOptions{})
 	if err == nil {
@@ -174,7 +183,7 @@ func verifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, 
 }
 
 // Check if Location exists; if not, create one
-func verifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName, imw string) error {
+func verifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string) error {
 	// Get the Location object
 	_, err := client.EdgeV2alpha1().Locations().Get(ctx, locationName, metav1.GetOptions{})
 	if err == nil {
@@ -189,20 +198,26 @@ func verifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, lo
 }
 
 // Check if default Location exists, delete it if so
-func verifyNoDefaultLocation(client *clientset.Clientset, ctx context.Context, logger klog.Logger, imw string) error {
+func verifyNoDefaultLocation(client *clientset.Clientset, ctx context.Context, logger klog.Logger) error {
 	// Check for "default" Location object
 	_, err := client.EdgeV2alpha1().Locations().Get(ctx, "default", metav1.GetOptions{})
 	if err != nil {
-		logger.Info(fmt.Sprintf("Verified no default Location in workspace root:%s", imw))
-		// Check that Location has user provided key=value pairs
-		return nil
+		// Check if error is due to the lack of a "default" location object (what we want)
+		// TODO is converting err to a string the right way to check this?
+		if err.Error() == "locations.edge.kubestellar.io \"default\" not found" {
+			logger.Info(fmt.Sprintf("Verified no default Location in workspace root:%s", imw))
+			return nil
+		}
+		// There is some error other than trying to get a non-existent object
+		logger.Error(err, fmt.Sprintf("Could not check if default Location in workspace root:%s", imw))
+		return err
 	}
+
 	// "default" Location exists, delete it
 	logger.Info(fmt.Sprintf("Found default Location in workspace root:%s, deleting it", imw))
 	err = client.EdgeV2alpha1().Locations().Delete(ctx, "default", metav1.DeleteOptions{})
 	if err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to delete default Location in workspace root:%s", imw))
-		// Check that Location has user provided key=value pairs
 		return err
 	}
 	return nil
