@@ -183,25 +183,32 @@ func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Contex
 }
 
 // Check if SyncTarget exists; if not, create one
-// apiVersion: edge.kubestellar.io/v2alpha1
-// kind: SyncTarget
-// metadata:
-//   name: "$objname"
-//   labels:
-//     id: "$objname"
 func verifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string) error {
 	// Get the SyncTarget object
-	_, err := client.EdgeV2alpha1().SyncTargets().Get(ctx, locationName, metav1.GetOptions{})
+	syncTarget, err := client.EdgeV2alpha1().SyncTargets().Get(ctx, locationName, metav1.GetOptions{})
 	if err == nil {
 		logger.Info(fmt.Sprintf("Found SyncTarget %s in workspace root:%s", locationName, imw))
 		// Check that SyncTarget has an "id" label matching locationName
-		// Check that SyncTarget has user provided key=value pairs
+		if syncTarget.ObjectMeta.Labels == nil {
+			logger.Info(fmt.Sprintf("SyncTarget %s is missing labels, adding 'id'", locationName))
+			syncTarget.ObjectMeta.Labels = map[string]string{"id": locationName}
+			return nil
+		}
+		id := syncTarget.ObjectMeta.Labels["id"]
+		if id != locationName {
+			logger.Info(fmt.Sprintf("SyncTarget %s 'id' label is '%s', changing to '%s'", locationName, id, locationName))
+			syncTarget.ObjectMeta.Labels["id"] = locationName
+		}
 		return nil
+	} else if err.Error() != fmt.Sprintf("synctargets.edge.kubestellar.io \"%s\" not found", locationName) {
+		// Some error other than a non-existant SyncTarget
+		logger.Info(fmt.Sprintf("Problem checking for SyncTarget %s in workspace root:%s", locationName, imw))
+		return err
 	}
 	// SyncTarget does not exist, must create
 	logger.Info(fmt.Sprintf("No SyncTarget %s in workspace root:%s, creating it", locationName, imw))
 
-	syncTarget := v2alpha1.SyncTarget {
+	syncTarget = &v2alpha1.SyncTarget {
 		TypeMeta: metav1.TypeMeta {
 			Kind: "SyncTarget",
 			APIVersion: "edge.kubestellar.io/v2alpha1",
@@ -211,7 +218,7 @@ func verifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, 
 			Labels: map[string]string{"id": locationName},
 		},
 	}
-	_, err = client.EdgeV2alpha1().SyncTargets().Create(ctx, &syncTarget, metav1.CreateOptions{})
+	_, err = client.EdgeV2alpha1().SyncTargets().Create(ctx, syncTarget, metav1.CreateOptions{})
 	if err != nil {
 		logger.Info(fmt.Sprintf("Failed to create SyncTarget %s in workspace root:%s", locationName, imw))
 		return err
@@ -220,14 +227,6 @@ func verifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, 
 	return nil
 }
 
-// apiVersion: edge.kubestellar.io/v2alpha1
-// kind: Location
-// spec:
-//   resource: {group: edge.kubestellar.io, version: v2alpha1, resource: synctargets}
-//   instanceSelector:
-//     matchLabels: {"id":"$objname"}
-// metadata:
-//   name: "$objname"
 // Check if Location exists; if not, create one
 func verifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string) error {
 	// Get the Location object
@@ -236,6 +235,10 @@ func verifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, lo
 		logger.Info(fmt.Sprintf("Found Location %s in workspace root:%s", locationName, imw))
 		// Check that Location has user provided key=value pairs
 		return nil
+	} else if err.Error() != fmt.Sprintf("locations.edge.kubestellar.io \"%s\" not found", locationName) {
+		// Some error other than a non-existant SyncTarget
+		logger.Info(fmt.Sprintf("Problem checking for Location %s in workspace root:%s", locationName, imw))
+		return err
 	}
 	// Location does not exist, must create
 	logger.Info(fmt.Sprintf("No Location %s in workspace root:%s, creating it", locationName, imw))
