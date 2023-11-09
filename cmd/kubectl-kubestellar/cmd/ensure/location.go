@@ -491,7 +491,6 @@ type objectInterface struct {
 	metav1.ObjectMeta
 }
 
-
 // Check that SyncTarget or Location has user provided key=value pairs, add them if not
 func verifyObjectLabels(object *objectInterface, client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string, labels []string) error {
 	updateObject := false // bool to see if we need to update object
