@@ -14,7 +14,7 @@ limitations under the License.
 // Sub-command for ensuring the existence and configuration a location in a WEC.
 // The IMW is provided by the required --imw flag.
 // The location name is provided as a required command line argument.
-// Optional key=value pairs are provided as command line arguments, for which
+// Labels in key=value pairs are provided as command line arguments, for which
 // we will ensure that these exist as labels in the Location and SyncTarget.
 
 package ensure
@@ -31,7 +31,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-	//"k8s.io/client-go/tools/reference"
 	"k8s.io/klog/v2"
 
 	v1alpha1 "github.com/kcp-dev/kcp/pkg/apis/apis/v1alpha1"
@@ -80,9 +79,10 @@ func newCmdEnsureLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command
 // - check if APIBinding "edge.kubestellar.io" exists in IMW, create if not
 // - check for SyncTarget of provided name in IMW, create if not
 // - check that SyncTarget has an "id" label matching the Location name
+// - ensure that SyncTarget has the labels provided by the user
 // - check for Location of provided name in IMW, create if not
+// - ensure that Location has the labels provided by the user
 // - if Location "default" exists, delete it
-// - check that provided key=value pairs exist as labels in SyncTarget and Location
 func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string) error {
 	locationName := args[0]
 	labels := args[1:]
@@ -229,8 +229,6 @@ func checkLabelArgs(labels []string, logger klog.Logger) error {
 	return nil
 }
 
-
-
 // Check if APIBinding exists; if not, create one.
 func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Context, logger klog.Logger) error {
 	// Get the APIBinding
@@ -275,7 +273,13 @@ func verifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, 
 	if err == nil {
 		logger.Info(fmt.Sprintf("Found SyncTarget %s in workspace root:%s", locationName, imw))
 		// Check that SyncTarget has an "id" label matching locationName
-		return verifySyncTargetId(syncTarget, client, ctx, logger, locationName)
+		err = verifySyncTargetId(syncTarget, client, ctx, logger, locationName)
+		if err != nil {
+			return err
+		}
+		// Check that SyncTarget has user provided key=value pairs, add them if not
+		err = verifySyncTargetLabels(syncTarget, client, ctx, logger, locationName, labels)
+		return err
 	// TODO is converting err to a string the right way to check this?
 	} else if err.Error() != fmt.Sprintf("synctargets.edge.kubestellar.io \"%s\" not found", locationName) {
 		// Some error other than a non-existant SyncTarget
@@ -340,14 +344,26 @@ func verifySyncTargetId(syncTarget *v2alpha1.SyncTarget, client *clientset.Clien
 	return nil
 }
 
+// $ kubectl get synctargets.edge.kubestellar.io ks-edge-cluster1 -o json | jq .metadata.labels
+// {
+//   "env": "ks-edge-cluster1",
+//   "id": "ks-edge-cluster1",
+//   "location-group": "edge"
+// }
+// Check that SyncTarget has user provided key=value pairs, add them if not
+func verifySyncTargetLabels(syncTarget *v2alpha1.SyncTarget, client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string, labels []string) error {
+	return nil
+}
+
 // Check if Location exists; if not, create one
 func verifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string, labels []string) error {
 	// Get the Location object
-	_, err := client.EdgeV2alpha1().Locations().Get(ctx, locationName, metav1.GetOptions{})
+	location, err := client.EdgeV2alpha1().Locations().Get(ctx, locationName, metav1.GetOptions{})
 	if err == nil {
 		logger.Info(fmt.Sprintf("Found Location %s in workspace root:%s", locationName, imw))
-
-		return nil
+		// Check that Location has user provided key=value pairs, add them if not
+		err = verifyLocationLabels(location, client, ctx, logger, locationName, labels)
+		return err
 	// TODO is converting err to a string the right way to check this?
 	} else if err.Error() != fmt.Sprintf("locations.edge.kubestellar.io \"%s\" not found", locationName) {
 		// Some error other than a non-existant SyncTarget
@@ -357,7 +373,7 @@ func verifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, lo
 	// Location does not exist, must create
 	logger.Info(fmt.Sprintf("No Location %s in workspace root:%s, creating it", locationName, imw))
 
-	location := v2alpha1.Location {
+	location = &v2alpha1.Location {
 		TypeMeta: metav1.TypeMeta {
 			Kind: "Location",
 			APIVersion: "edge.kubestellar.io/v2alpha1",
@@ -390,12 +406,23 @@ func verifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, lo
 			location.ObjectMeta.Labels = map[string]string{key: value}
 		}
 	}
-	_, err = client.EdgeV2alpha1().Locations().Create(ctx, &location, metav1.CreateOptions{})
+	_, err = client.EdgeV2alpha1().Locations().Create(ctx, location, metav1.CreateOptions{})
 	if err != nil {
-		logger.Info(fmt.Sprintf("Failed to create SyncTarget %s in workspace root:%s", locationName, imw))
+		logger.Info(fmt.Sprintf("Failed to create Location %s in workspace root:%s", locationName, imw))
 		return err
 	}
 
+	return nil
+}
+
+//
+// $ kubectl get locations.edge.kubestellar.io ks-edge-cluster1 -o json | jq .metadata.labels
+// {
+//   "env": "ks-edge-cluster1",
+//   "location-group": "edge"
+// }
+// Check that Location has user provided key=value pairs, add them if not
+func verifyLocationLabels(location *v2alpha1.Location, client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string, labels []string) error {
 	return nil
 }
 
@@ -424,33 +451,3 @@ func verifyNoDefaultLocation(client *clientset.Clientset, ctx context.Context, l
 	}
 	return nil
 }
-
-
-
-	// Check that SyncTarget has user provided key=value pairs
-	// Check that Location has user provided key=value pairs
-
-// bash variable stlabs=
-// $ kubectl get synctargets.edge.kubestellar.io ks-edge-cluster1 -o json | jq .metadata.labels
-// gives the result:
-// {
-//   "env": "ks-edge-cluster1",
-//   "id": "ks-edge-cluster1",
-//   "location-group": "edge"
-// }
-//
-// bash variable loclabs=
-// $ kubectl get locations.edge.kubestellar.io ks-edge-cluster1 -o json | jq .metadata.labels
-// gives the result:
-// {
-//   "env": "ks-edge-cluster1",
-//   "location-group": "edge"
-// }
-//
-// **** Locations might not have a metadata.labels, so must create if nil
-//
-// for SyncTarget/Location outputs above, make sure labelname=labelvalue pairs
-// given at the command line match what is in the output. If not, overwrite them with
-// kubectl label --overwrite synctargets.edge.kubestellar.io "$objname" "${key}=${val}"
-// or
-// kubectl label --overwrite locations.edge.kubestellar.io "$objname" "${key}=${val}"
