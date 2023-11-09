@@ -301,7 +301,7 @@ func verifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, 
 	}
 	// Add any provided labels
 	for _, labelString := range labels {
-		// split raw label string into key and value
+		// Split raw label string into key and value
 		labelSlice := strings.Split(labelString, "=")
 		key := labelSlice[0]
 		value := labelSlice[1]
@@ -319,6 +319,7 @@ func verifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, 
 // Make sure the SyncTarget has an id label matching locationName (update if not)
 func verifySyncTargetId(syncTarget *v2alpha1.SyncTarget, client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string) error {
 	if syncTarget.ObjectMeta.Labels != nil {
+		// We're missing a labels field, create it
 		id := syncTarget.ObjectMeta.Labels["id"]
 		if id == locationName {
 			// id matches locationName, all good
@@ -344,14 +345,43 @@ func verifySyncTargetId(syncTarget *v2alpha1.SyncTarget, client *clientset.Clien
 	return nil
 }
 
-// $ kubectl get synctargets.edge.kubestellar.io ks-edge-cluster1 -o json | jq .metadata.labels
-// {
-//   "env": "ks-edge-cluster1",
-//   "id": "ks-edge-cluster1",
-//   "location-group": "edge"
-// }
 // Check that SyncTarget has user provided key=value pairs, add them if not
 func verifySyncTargetLabels(syncTarget *v2alpha1.SyncTarget, client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string, labels []string) error {
+	updateSyncTarget := false // bool to see if we need to update SyncTarget
+	// Check for labels missing or not matching those provide by user
+	for _, labelString := range labels {
+		// Split raw label string into key and value
+		labelSlice := strings.Split(labelString, "=")
+		key := labelSlice[0]
+		value := labelSlice[1]
+		// Make sure we have a labels field
+		if syncTarget.ObjectMeta.Labels == nil {
+			// There are no labels, create the label map with first label
+			logger.Info("SyncTarget is missing labels, adding it")
+			logger.Info(fmt.Sprintf("SyncTarget label %s=, updating value to %s", key, value))
+			syncTarget.ObjectMeta.Labels = map[string]string{key: value}
+			updateSyncTarget = true
+			continue
+		}
+		valueCurrent := syncTarget.ObjectMeta.Labels[key]
+		// Make sure label matches user provided value
+		if valueCurrent != value {
+			logger.Info(fmt.Sprintf("SyncTarget label %s=%s, updating value to %s", key, valueCurrent, value))
+			syncTarget.ObjectMeta.Labels[key] = value
+			updateSyncTarget = true
+		} else {
+			logger.Info(fmt.Sprintf("SyncTarget has label %s=%s", key, value))
+		}
+	}
+	// Update SyncTarget if needed
+	if updateSyncTarget {
+		// Apply updates to SyncTarget
+		_, err := client.EdgeV2alpha1().SyncTargets().Update(ctx, syncTarget, metav1.UpdateOptions{})
+		if err != nil {
+			logger.Info(fmt.Sprintf("Failed to update SyncTarget %s in workspace root:%s", locationName, imw))
+			return err
+		}
+	}
 	return nil
 }
 
@@ -394,7 +424,7 @@ func verifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, lo
 	}
 	// Add any provided labels
 	for _, labelString := range labels {
-		// split raw label string into key and value
+		// Split raw label string into key and value
 		labelSlice := strings.Split(labelString, "=")
 		key := labelSlice[0]
 		value := labelSlice[1]
@@ -402,7 +432,7 @@ func verifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, lo
 			// Add key=value
 			location.ObjectMeta.Labels[key] = value
 		} else {
-			// No labels exist yet, add the labels map along with this key=value
+			// No labels field exists, add the labels map along with this key=value
 			location.ObjectMeta.Labels = map[string]string{key: value}
 		}
 	}
@@ -415,14 +445,10 @@ func verifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, lo
 	return nil
 }
 
-//
-// $ kubectl get locations.edge.kubestellar.io ks-edge-cluster1 -o json | jq .metadata.labels
-// {
-//   "env": "ks-edge-cluster1",
-//   "location-group": "edge"
-// }
 // Check that Location has user provided key=value pairs, add them if not
 func verifyLocationLabels(location *v2alpha1.Location, client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string, labels []string) error {
+
+
 	return nil
 }
 
