@@ -21,9 +21,10 @@ package ensure
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"errors"
+	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -47,9 +48,12 @@ var imw string // IMW workspace path
 func newCmdEnsureLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 	// Make location command
 	cmdLocation := &cobra.Command{
-		Use:     "location --imw <IMW_NAME> <LOCATION_NAME> [\"KEY=VALUE\" ...]",
+		Use:     "location --imw <IMW_NAME> <LOCATION_NAME> <\"KEY=VALUE\" ...>",
 		Aliases: []string{"loc"},
 		Short:   "Ensure existence and configuration of an inventory listing for a WEC",
+		// We actually require at least 2 arguments (location name and a label),
+		// but more descriptive error messages will be provided by leaving this
+		// set to 1.
 		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// At this point set silence usage to true, so that any errors
@@ -85,8 +89,14 @@ func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 	ctx := context.Background()
 	logger := klog.FromContext(ctx)
 
+	// Make sure user provided location name is valid
+	err := checkLocationName(locationName, logger)
+	if err != nil {
+		return err
+	}
+
 	// Make sure user provided labels are valid
-	err := checkLabelArgs(labels, logger)
+	err = checkLabelArgs(labels, logger)
 	if err != nil {
 		return err
 	}
@@ -153,31 +163,73 @@ func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 	return nil
 }
 
+// Make sure user provided location name is valid
+func checkLocationName(locationName string, logger klog.Logger) error {
+	// ensure characters are valid
+	matched, _ := regexp.MatchString(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`, locationName)
+	if !matched {
+		err := errors.New("Location name must match regex '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'")
+		logger.Error(err, fmt.Sprintf("Invalid location name %s", locationName))
+		return err
+	}
+	// check for reserved words
+	if locationName == "default" {
+		err := errors.New("Location name 'default' may not be used")
+		logger.Error(err, fmt.Sprintf("Invalid location name %s", locationName))
+		return err
+	}
+	return nil
+}
+
 // Verify that user provided key=value arguments are valid
 func checkLabelArgs(labels []string, logger klog.Logger) error {
+	if len(labels) < 1 {
+		err := errors.New("No labels provided")
+		logger.Error(err, "At least one label must be provided")
+		return err
+	}
 	// Iterate over labels
 	for _, labelString := range labels {
 		// Ensure the raw string contains a =
 		if !strings.Contains(labelString, "=") {
-			return errors.New(fmt.Sprintf("Invalid label: %s", labelString))
+			err := errors.New("Invalid label, missing '='")
+			logger.Error(err, fmt.Sprintf("Invalid label, must format as \"key=value\": %s", labelString))
+			return err
 		}
 		// Split substring on =
 		labelSlice := strings.Split(labelString, "=")
 		// We should have only a key and value now
 		if len(labelSlice) != 2 {
-			return errors.New(fmt.Sprintf("Invalid label: %s", labelString))
+			err := errors.New("Invalid label, must exactly one '='")
+			logger.Error(err, fmt.Sprintf("Invalid label, must format as \"key=value\": %s", labelString))
+			return err
 		}
+		key := labelSlice[0]
+		value := labelSlice[1]
 		// Make sure the key and value contain only valid characters
-
-    //  "$key" =~ ^[a-zA-Z0-9][a-zA-Z0-9_./-]*$ 
-	// key, must match '^[a-zA-Z0-9][a-zA-Z0-9_./-]*$' and Kubernetes restrictions
-
-    //  "$val" =~ ^[a-zA-Z0-9]([a-zA-Z0-9_.-]{0,61}[a-zA-Z0-9])?$ 
-	// value, must match '^[a-zA-Z0-9]([a-zA-Z0-9_.-]{0,61}[a-zA-Z0-9])?$'
-
+		matched, _ := regexp.MatchString(`^[a-zA-Z0-9][a-zA-Z0-9_./-]*$`, key)
+		if !matched {
+			err := errors.New("Key must match regex '^[a-zA-Z0-9][a-zA-Z0-9_./-]*$'")
+			logger.Error(err, fmt.Sprintf("Invalid key %s in label \"%s\"", key, labelString))
+			return err
+		}
+		matched, _ = regexp.MatchString(`^[a-zA-Z0-9]([a-zA-Z0-9_.-]{0,61}[a-zA-Z0-9])?$`, value)
+		if !matched {
+			err := errors.New("Value must match regex '^[a-zA-Z0-9]([a-zA-Z0-9_.-]{0,61}[a-zA-Z0-9])?$'")
+			logger.Error(err, fmt.Sprintf("Invalid value %s in label \"%s\"", value, labelString))
+			return err
+		}
+		// Make sure no invalid keys are passed
+		if key == "id" {
+			err := errors.New("Invalid key")
+			logger.Error(err, "Key 'id' is handled internally and may not be specified")
+			return err
+		}
 	}
 	return nil
 }
+
+
 
 // Check if APIBinding exists; if not, create one.
 func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Context, logger klog.Logger) error {
@@ -266,6 +318,7 @@ func verifySyncTargetId(syncTarget *v2alpha1.SyncTarget, client *clientset.Clien
 		id := syncTarget.ObjectMeta.Labels["id"]
 		if id == locationName {
 			// id matches locationName, all good
+			logger.Info(fmt.Sprintf("SyncTarget 'id' label matches %s", locationName))
 			return nil
 		}
 		// ID label does not match locationName, update it
