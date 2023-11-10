@@ -228,7 +228,7 @@ func deleteAPIBinding(client *kcpclientset.Clientset, ctx context.Context, logge
 		return err
 	} else if err.Error() != fmt.Sprintf("apibindings.apis.kcp.io \"%s\" not found", bindName) {
 		// Some error other than a non-existant APIBinding
-		logger.Info(fmt.Sprintf("Problem remiving APIBinding %s", bindName))
+		logger.Info(fmt.Sprintf("Problem removing APIBinding %s", bindName))
 		return err
 	}
 	logger.Info(fmt.Sprintf("Verified no APIBinding %s", bindName))

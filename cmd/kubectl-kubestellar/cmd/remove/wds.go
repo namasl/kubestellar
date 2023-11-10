@@ -69,12 +69,6 @@ func removeWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
 	rootClientOpts := clientopts.NewClientOpts("root", "Access to the root workspace")
 	// Set default context to "root"
 	rootClientOpts.SetDefaultCurrentContext("root")
-	// Make a new flag set named rmwds
-//	fs := pflag.NewFlagSet("rmwds", pflag.ExitOnError)
-	// Add cliOpts flags to fs (flow from syntax is confusing, goes -->)
-//	cliOpts.AddFlags(fs)
-	// add fs to rootClientOpts
-//	rootClientOpts.AddFlags(fs)
 
 	// Get client config from flags
 	config, err := rootClientOpts.ToRESTConfig()
@@ -91,12 +85,26 @@ func removeWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
 	}
 
 	// Delete WDS KCP workspace
-	err = client.TenancyV1alpha1().Workspaces().Delete(ctx, wdsName, metav1.DeleteOptions{})
+	err = deleteWorkspace(client, ctx, logger, wdsName)
 	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to delete workspace %s", wdsName))
 		return err
 	}
-	logger.Info(fmt.Sprintf("Removed workspace %s", wdsName))
 
+	return nil
+}
+
+// Delete a KCP workspace, don't return an error if it doesn't exist
+func deleteWorkspace(client *kcpclientset.Clientset, ctx context.Context, logger klog.Logger, wsName string) error {
+	// Delete the workspace
+	err := client.TenancyV1alpha1().Workspaces().Delete(ctx, wsName, metav1.DeleteOptions{})
+	if err == nil {
+		logger.Info(fmt.Sprintf("Removed workspace %s", wsName))
+		return err
+	} else if err.Error() != fmt.Sprintf("workspaces.tenancy.kcp.io \"%s\" not found", wsName) {
+		// Some error other than a non-existant workspace
+		logger.Info(fmt.Sprintf("Problem removing workspace %s", wsName))
+		return err
+	}
+	logger.Info(fmt.Sprintf("Verified no workspace %s", wsName))
 	return nil
 }

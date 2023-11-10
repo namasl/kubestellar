@@ -78,13 +78,6 @@ func removeLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 	// Set default context to "root"; we will need to append the IMW name to the root server
 	imwClientOpts.SetDefaultCurrentContext("root")
 
-	// Make a new flag set named rmloc
-//	fs := pflag.NewFlagSet("rmloc", pflag.ExitOnError)
-	// Add cliOpts flags to fs (flow from syntax is confusing, goes -->)
-//	cliOpts.AddFlags(fs)
-	// add imwClientOpts to fs (flow from syntax is confusing, goes -->)
-//	imwClientOpts.AddFlags(fs)
-
 	// Get client config from flags
 	config, err := imwClientOpts.ToRESTConfig()
 	if err != nil {
@@ -104,20 +97,48 @@ func removeLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 	}
 
 	// Delete the SyncTarget object
-	err = client.EdgeV2alpha1().SyncTargets().Delete(ctx, locationName, metav1.DeleteOptions{})
+	err = deleteSyncTarget(client, ctx, logger, locationName)
 	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to delete SyncTarget %s from workspace root:%s", locationName, imw))
 		return err
 	}
-	logger.Info(fmt.Sprintf("Removed SyncTarget %s from workspace root:%s", locationName, imw))
 
 	// Delete the Location object
-	err = client.EdgeV2alpha1().Locations().Delete(ctx, locationName, metav1.DeleteOptions{})
+	err = deleteLocation(client, ctx, logger, locationName)
 	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to delete Location %s from workspace root:%s", locationName, imw))
 		return err
 	}
-	logger.Info(fmt.Sprintf("Removed Location %s from workspace root:%s", locationName, imw))
 
+	return nil
+}
+
+// Delete a SyncTarget, don't return an error if it doesn't exist
+func deleteSyncTarget(client *clientset.Clientset, ctx context.Context, logger klog.Logger, syncTargetName string) error {
+	// Delete the workspace
+	err := client.EdgeV2alpha1().SyncTargets().Delete(ctx, syncTargetName, metav1.DeleteOptions{})
+	if err == nil {
+		logger.Info(fmt.Sprintf("Removed SyncTarget %s from workspace root:%s", syncTargetName, imw))
+		return err
+	} else if err.Error() != fmt.Sprintf("synctargets.edge.kubestellar.io \"%s\" not found", syncTargetName) {
+		// Some error other than a non-existant workspace
+		logger.Info(fmt.Sprintf("Problem removing SyncTarget %s from workspace root:%s", syncTargetName, imw))
+		return err
+	}
+	logger.Info(fmt.Sprintf("Verified no SyncTarget %s in workspace root:%s", syncTargetName, imw))
+	return nil
+}
+
+// Delete a Location, don't return an error if it doesn't exist
+func deleteLocation(client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string) error {
+	// Delete the workspace
+	err := client.EdgeV2alpha1().Locations().Delete(ctx, locationName, metav1.DeleteOptions{})
+	if err == nil {
+		logger.Info(fmt.Sprintf("Removed Location %s from workspace root:%s", locationName, imw))
+		return err
+	} else if err.Error() != fmt.Sprintf("locations.edge.kubestellar.io \"%s\" not found", locationName) {
+		// Some error other than a non-existant workspace
+		logger.Info(fmt.Sprintf("Problem removing Location %s from workspace root:%s", locationName, imw))
+		return err
+	}
+	logger.Info(fmt.Sprintf("Verified no Location %s in workspace root:%s", locationName, imw))
 	return nil
 }
