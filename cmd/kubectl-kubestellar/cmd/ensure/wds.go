@@ -177,9 +177,10 @@ func verifyOrCreateWDS(client *kcpclientset.Clientset, ctx context.Context, logg
 // Check for Kube APIBindings
 // If withKube is true, create any bindings that don't exist
 // If withKube is false, delete any bindings that exist
-
 func verifyKubeAPIBindings(client *kcpclientset.Clientset, ctx context.Context, logger klog.Logger) error {
 	// APIBindings to check
+	// TODO the commented out bindings have permission problems when trying to create,
+	// and this issue also exists with the Bash script implementation.
 	binds := []string {
 		"kubernetes",
 		"apiregistration.k8s.io",
