@@ -26,6 +26,7 @@ import (
 	//"reflect"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -66,7 +67,7 @@ func newCmdEnsureLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command
 		},
 	}
 
-	// add flag for IMW workspace
+	// Add flag for IMW workspace
 	cmdLocation.Flags().StringVar(&imw, "imw", "", "IMW workspace")
 	cmdLocation.MarkFlagRequired("imw")
 	return cmdLocation
@@ -90,6 +91,11 @@ func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 	ctx := context.Background()
 	logger := klog.FromContext(ctx)
 
+	// Print all flags and their values if verbosity level is at least 1
+	cmdLocation.Flags().VisitAll(func(flg *pflag.Flag) {
+		logger.V(1).Info(fmt.Sprintf("Command line flag %s=%s", flg.Name, flg.Value))
+	})
+
 	// Make sure user provided location name is valid
 	err := checkLocationName(locationName, logger)
 	if err != nil {
@@ -101,11 +107,6 @@ func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 	if err != nil {
 		return err
 	}
-
-	// Print all flags and their values if verbosity level is at least 1
-	cmdLocation.Flags().VisitAll(func(flg *pflag.Flag) {
-		logger.V(1).Info(fmt.Sprintf("Command line flag %s=%s", flg.Name, flg.Value))
-	})
 
 	// Options for IMW workspace
 	imwClientOpts := clientopts.NewClientOpts("imw", "access to the IMW workspace")
@@ -236,11 +237,15 @@ func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Contex
 	_, err := client.ApisV1alpha1().APIBindings().Get(ctx, "edge.kubestellar.io", metav1.GetOptions{})
 	if err == nil {
     	logger.Info(fmt.Sprintf("Found APIBinding edge.kubestellar.io in workspace root:%s", imw))
-		return nil
+		return err
+	} else if err.Error() != "apibindings.apis.kcp.io \"edge.kubestellar.io\" not found" {
+		// Some error other than a non-existant APIBinding
+		logger.Info(fmt.Sprintf("Problem checking for APIBinding edge.kubestellar.io in workspace root:%s", imw))
+		return err
 	}
 
 	// APIBinding does not exist, must create
-	logger.Info(fmt.Sprintf("No APIBinding edge.kubestellar.io in workspace root:%s", imw))
+	logger.Info(fmt.Sprintf("No APIBinding edge.kubestellar.io in workspace root:%s, creating it", imw))
 
 	apiBinding := v1alpha1.APIBinding {
 		TypeMeta: metav1.TypeMeta {
@@ -264,6 +269,10 @@ func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Contex
 		return err
 	}
 
+	// Wait for new APIBinding
+	// TODO find a way to wait until ready, and timeout after some period
+	time.Sleep(5 * time.Second)
+
 	return nil
 }
 
@@ -280,6 +289,11 @@ func verifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, 
 		}
 		// Check that SyncTarget has user provided key=value pairs, add them if not
 		err = verifySyncTargetLabels(syncTarget, client, ctx, logger, locationName, labels)
+		return err
+	// TODO is converting err to a string the right way to check this?
+	} else if err.Error() == fmt.Sprintf("the server could not find the requested resource (get synctargets.edge.kubestellar.io %s)", locationName) {
+		logger.Info(fmt.Sprintf("*** APIBinding has probably not yet spun up %s in workspace root:%s ***", locationName, imw))
+		logger.Info("*** Try re-running ensure command ***")
 		return err
 	// TODO is converting err to a string the right way to check this?
 	} else if err.Error() != fmt.Sprintf("synctargets.edge.kubestellar.io \"%s\" not found", locationName) {
@@ -501,6 +515,7 @@ func verifyObjectLabels(object *objectInterface, client *clientset.Clientset, ct
 	case reflect.TypeOf(&v2alpha1.SyncTarget{}):
 		objectStr = "SyncTarget"
 	default:
+		// Invalid type, developer did something wrong, barf on them
 		panic(0)
 	}
 	// Check for labels missing or not matching those provide by user
@@ -538,6 +553,7 @@ func verifyObjectLabels(object *objectInterface, client *clientset.Clientset, ct
 		case reflect.TypeOf(&v2alpha1.SyncTarget{}):
 			_, err = client.EdgeV2alpha1().SyncTargets().Update(ctx, object, metav1.UpdateOptions{})
 		default:
+			// It should be impossible to get here
 			panic(0)
 		}
 		if err != nil {

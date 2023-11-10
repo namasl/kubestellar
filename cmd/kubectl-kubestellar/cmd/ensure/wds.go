@@ -16,8 +16,11 @@ limitations under the License.
 package ensure
 
 import (
-    "fmt"
     "context"
+    "errors"
+    "fmt"
+    "regexp"
+
 
     "github.com/spf13/cobra"
     "github.com/spf13/pflag"
@@ -30,6 +33,9 @@ import (
 
 	clientopts "github.com/kubestellar/kubestellar/pkg/client-options"
 )
+
+var withKube bool
+
 // Create the Cobra sub-command for 'kubectl kubestellar ensure wds'
 func newCmdEnsureWds(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
     // Make wds command
@@ -49,6 +55,9 @@ func newCmdEnsureWds(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
         },
     }
 
+    // Add flag for 
+	cmdWds.Flags().BoolVar(&withKube, "with-kube", true, "Include API binding")
+	cmdWds.MarkFlagRequired("with-kube")
     return cmdWds
 }
 
@@ -62,6 +71,12 @@ func ensureWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
 	cmdWds.Flags().VisitAll(func(flg *pflag.Flag) {
 		logger.V(1).Info(fmt.Sprintf("Command line flag %s=%s", flg.Name, flg.Value))
 	})
+
+	// Make sure user provided WDS name is valid
+	err := checkLocationName(wdsName, logger)
+	if err != nil {
+		return err
+	}
 
     // Options for root workspace
 	rootClientOpts := clientopts.NewClientOpts("root", "access to the root workspace")
@@ -82,16 +97,56 @@ func ensureWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
 		return err
 	}
 
-    // Get WDS KCP workspace
-    workspace, err := client.TenancyV1alpha1().Workspaces().Get(ctx, wdsName, metav1.GetOptions{})
+    // Check for WDS workspace, create if it does not exist
+    err = verifyOrCreateWDS(client, ctx, logger, wdsName)
 	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to get workspace %s", wdsName))
 		return err
 	}
-    logger.Info(fmt.Sprintf("Found workspace %s", wdsName))
 
-    fmt.Println("WS WS WS WS WS WS")
-    fmt.Println(workspace)
+    // Check for APIBinding bind-espw, create if it does not exist
+
+    // Check for Kube APIBindings
+    // If withKube is true, create any bindings that don't exist
+    // If withKube is false, delete any bindings that exist
 
     return nil
 }
+
+// Make sure user provided WDS name is valid
+func checkWdsName(wdsName string, logger klog.Logger) error {
+	// ensure characters are valid
+	matched, _ := regexp.MatchString(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`, wdsName)
+	if !matched {
+		err := errors.New("WDS name must match regex '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'")
+		logger.Error(err, fmt.Sprintf("Invalid WDS name %s", wdsName))
+		return err
+	}
+	return nil
+}
+
+func verifyOrCreateWDS(client *kcpclientset.Clientset, ctx context.Context, logger klog.Logger, wdsName string) error {
+    _, err := client.TenancyV1alpha1().Workspaces().Get(ctx, wdsName, metav1.GetOptions{})
+	if err == nil {
+        logger.Info(fmt.Sprintf("Found WDS workspace %s", wdsName))
+		return err
+	}
+    logger.Error(err, fmt.Sprintf("No WDS workspace %s, creating it", wdsName))
+    
+
+    return nil
+}
+
+// apiVersion: apis.kcp.io/v1alpha1
+// kind: APIBinding
+// metadata:
+//   name: BINDING_NAME
+// spec:
+//   reference:
+//     export:
+//       path: PATH_NAME
+//       name: EXPORT_NAME
+// Create an APIBinding
+func createAPIBinding() error {
+    return nil
+}
+
