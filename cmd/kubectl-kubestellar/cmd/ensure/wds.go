@@ -120,10 +120,8 @@ func ensureWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
 		return err
 	}
 
-	// Check for Kube APIBindings
-	// If withKube is true, create any bindings that don't exist
-	// If withKube is false, delete any bindings that exist
-	err = verifyKubeAPIBindings()
+	// Check for Kube APIBindings, add/remove as needed depending on withKube
+	err = verifyKubeAPIBindings(client, ctx, logger)
 	if err != nil {
 		return err
 	}
@@ -176,7 +174,61 @@ func verifyOrCreateWDS(client *kcpclientset.Clientset, ctx context.Context, logg
 	}
 	return nil
 }
+// Check for Kube APIBindings
+// If withKube is true, create any bindings that don't exist
+// If withKube is false, delete any bindings that exist
 
-func verifyKubeAPIBindings() error {
+func verifyKubeAPIBindings(client *kcpclientset.Clientset, ctx context.Context, logger klog.Logger) error {
+	// APIBindings to check
+	binds := []string {
+		"kubernetes",
+		"apiregistration.k8s.io",
+		"apps",
+		"autoscaling",
+		"batch",
+		"core.k8s.io",
+		//"cluster-core.k8s.io",
+		"discovery.k8s.io",
+		"flowcontrol.apiserver.k8s.io",
+		"networking.k8s.io",
+		//"cluster-networking.k8s.io",
+		"node.k8s.io",
+		"policy",
+		"scheduling.k8s.io",
+		"storage.k8s.io",
+		//"cluster-storage.k8s.io",
+	}
+	// Iterate over bindings
+	for _, exportName := range binds {
+		bindName := "bind-" + exportName
+		if withKube {
+			// Make sure these bindings exist
+			err := verifyOrCreateAPIBinding(client, ctx, logger, bindName, exportName, "root:compute")
+			if err != nil {
+				return err
+			}
+		} else {
+			// Remove these bindings if they exist
+			err := deleteAPIBinding(client, ctx, logger, bindName)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func deleteAPIBinding(client *kcpclientset.Clientset, ctx context.Context, logger klog.Logger, bindName string) error {
+	// Delete the APIBinding
+	err := client.ApisV1alpha1().APIBindings().Delete(ctx, bindName, metav1.DeleteOptions{})
+	if err == nil {
+		logger.Info(fmt.Sprintf("Removed APIBinding %s", bindName))
+		return err
+	} else if err.Error() != fmt.Sprintf("apibindings.apis.kcp.io \"%s\" not found", bindName) {
+		// Some error other than a non-existant APIBinding
+		logger.Info(fmt.Sprintf("Problem remiving APIBinding %s", bindName))
+		return err
+	}
+	logger.Info(fmt.Sprintf("Verified no APIBinding %s", bindName))
 	return nil
 }
