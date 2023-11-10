@@ -26,7 +26,6 @@ import (
 	//"reflect"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -35,7 +34,6 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/klog/v2"
 
-	v1alpha1 "github.com/kcp-dev/kcp/pkg/apis/apis/v1alpha1"
 	kcpclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
 
 	v2alpha1 "github.com/kubestellar/kubestellar/pkg/apis/edge/v2alpha1"
@@ -109,7 +107,7 @@ func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 	}
 
 	// Options for IMW workspace
-	imwClientOpts := clientopts.NewClientOpts("imw", "access to the IMW workspace")
+	imwClientOpts := clientopts.NewClientOpts("imw", "Access to the IMW workspace")
 	// Set default context to "root"; we will need to append the IMW name to the root server
 	imwClientOpts.SetDefaultCurrentContext("root")
 
@@ -132,7 +130,7 @@ func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 	}
 
 	// Check that APIBinding exists, create if not
-	err = verifyOrCreateAPIBinding(kcpClient, ctx, logger)
+	err = verifyOrCreateAPIBinding(kcpClient, ctx, logger, "edge.kubestellar.io", "edge.kubestellar.io", "root:espw")
 	if err != nil {
 		return err
 	}
@@ -228,54 +226,6 @@ func checkLabelArgs(labels []string, logger klog.Logger) error {
 			return err
 		}
 	}
-	return nil
-}
-
-// Check if APIBinding exists; if not, create one.
-func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Context, logger klog.Logger) error {
-	// Get the APIBinding
-	_, err := client.ApisV1alpha1().APIBindings().Get(ctx, "edge.kubestellar.io", metav1.GetOptions{})
-	if err == nil {
-		logger.Info(fmt.Sprintf("Found APIBinding edge.kubestellar.io in workspace root:%s", imw))
-		return err
-	} else if err.Error() != "apibindings.apis.kcp.io \"edge.kubestellar.io\" not found" {
-		// Some error other than a non-existant APIBinding
-		logger.Info(fmt.Sprintf("Problem checking for APIBinding edge.kubestellar.io in workspace root:%s", imw))
-		return err
-	}
-
-	// APIBinding does not exist, create it
-	logger.Info(fmt.Sprintf("No APIBinding edge.kubestellar.io in workspace root:%s, creating it", imw))
-
-	apiBinding := v1alpha1.APIBinding {
-		TypeMeta: metav1.TypeMeta {
-			Kind: "apis.kcp.io/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta {
-			Name: "edge.kubestellar.io",
-		},
-		Spec: v1alpha1.APIBindingSpec {
-			Reference: v1alpha1.BindingReference {
-					Export: &v1alpha1.ExportBindingReference {
-						Name: "edge.kubestellar.io",
-						Path: "root:espw",
-				},
-			},
-		},
-	}
-	_, err = client.ApisV1alpha1().APIBindings().Create(ctx, &apiBinding, metav1.CreateOptions{})
-	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to create APIBinding in workspace root:%s", imw))
-		return err
-	}
-
-	// Wait for new APIBinding
-	// TODO find a way to wait until ready, and timeout after some period.
-	// Without this wait the subsequent attempt to look for a SyncTarget will
-	// fail, but we'll at least print an informative message if this wait
-	// is not long enough.
-	time.Sleep(5 * time.Second)
-
 	return nil
 }
 

@@ -16,14 +16,21 @@ limitations under the License.
 package ensure
 
 import (
-	"fmt"
+	"context"
 	"errors"
 	"flag"
+	"fmt"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/klog/v2"
+
+	v1alpha1 "github.com/kcp-dev/kcp/pkg/apis/apis/v1alpha1"
+	kcpclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
 )
 
 // Create Cobra sub-command for 'kubectl kubestellar ensure'
@@ -63,4 +70,53 @@ func init() {
 	EnsureCmd.AddCommand(newCmdEnsureLocation(cliOpts))
 	// Add wds sub-command
 	EnsureCmd.AddCommand(newCmdEnsureWds(cliOpts))
+}
+
+// Check if an APIBinding exists, create if not
+func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Context, logger klog.Logger, bindName, exportName, exportPath string) error {
+	// Get the APIBinding
+	_, err := client.ApisV1alpha1().APIBindings().Get(ctx, bindName, metav1.GetOptions{})
+	if err == nil {
+		logger.Info(fmt.Sprintf("Found APIBinding %s", bindName))
+		return err
+	} else if err.Error() != fmt.Sprintf("apibindings.apis.kcp.io \"%s\" not found", bindName) {
+		// Some error other than a non-existant APIBinding
+		logger.Info(fmt.Sprintf("Problem checking for APIBinding %s", bindName))
+		return err
+	}
+
+	// APIBinding does not exist, create it
+	logger.Info(fmt.Sprintf("No APIBinding %s, creating it", bindName))
+
+	apiBinding := v1alpha1.APIBinding {
+		TypeMeta: metav1.TypeMeta {
+			Kind: "APIBinding",
+			APIVersion: "apis.kcp.io/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta {
+			Name: bindName,
+		},
+		Spec: v1alpha1.APIBindingSpec {
+			Reference: v1alpha1.BindingReference {
+					Export: &v1alpha1.ExportBindingReference {
+						Path: exportPath,
+						Name: exportName,
+				},
+			},
+		},
+	}
+	_, err = client.ApisV1alpha1().APIBindings().Create(ctx, &apiBinding, metav1.CreateOptions{})
+	if err != nil {
+		logger.Error(err, fmt.Sprintf("Failed to create APIBinding %s", bindName))
+		return err
+	}
+
+	// Wait for new APIBinding
+	// TODO find a way to wait until ready, and timeout after some period.
+	// Without this wait the subsequent attempt to look for a SyncTarget will
+	// fail, but we'll at least print an informative message if this wait
+	// is not long enough.
+	time.Sleep(5 * time.Second)
+
+	return nil
 }

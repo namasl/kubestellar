@@ -31,7 +31,6 @@ import (
 	tenancyv1alpha1 "github.com/kcp-dev/kcp/pkg/apis/tenancy/v1alpha1"
 	kcpclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
 
-	//"github.com/kubestellar/kubestellar/pkg/apis/meta/v1alpha1"
 	clientopts "github.com/kubestellar/kubestellar/pkg/client-options"
 )
 
@@ -79,13 +78,13 @@ func ensureWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
 		return err
 	}
 
-	// Options for root workspace
-	rootClientOpts := clientopts.NewClientOpts("root", "access to the root workspace")
-	// set default context to "root"
-	rootClientOpts.SetDefaultCurrentContext("root")
+	// Options for WDS workspace
+	wdsClientOpts := clientopts.NewClientOpts("wds", "Access to the WDS workspace")
+	// Set default context to "root", later on we will append the WDS name to the root server
+	wdsClientOpts.SetDefaultCurrentContext("root")
 
 	// Get client config from flags
-	config, err := rootClientOpts.ToRESTConfig()
+	config, err := wdsClientOpts.ToRESTConfig()
 	if err != nil {
 		logger.Error(err, "Failed to get config from flags")
 		return err
@@ -104,11 +103,30 @@ func ensureWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, ar
 		return err
 	}
 
+	// Update host to work on objects within WDS workspace
+	config.Host += ":" + wdsName
+	logger.V(1).Info(fmt.Sprintf("Set host to %s", config.Host))
+
+	// Update client to work in WDS workspace
+	client, err = kcpclientset.NewForConfig(config)
+	if err != nil {
+		logger.Error(err, "Failed create client-go instance")
+		return err
+	}
+
 	// Check for APIBinding bind-espw, create if it does not exist
+	err = verifyOrCreateAPIBinding(client, ctx, logger, "bind-espw", "edge.kubestellar.io", "root:espw")
+	if err != nil {
+		return err
+	}
 
 	// Check for Kube APIBindings
 	// If withKube is true, create any bindings that don't exist
 	// If withKube is false, delete any bindings that exist
+	err = verifyKubeAPIBindings()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -125,6 +143,7 @@ func checkWdsName(wdsName string, logger klog.Logger) error {
 	return nil
 }
 
+// Check if WDS workspace exists, and if not create it
 func verifyOrCreateWDS(client *kcpclientset.Clientset, ctx context.Context, logger klog.Logger, wdsName string) error {
 	// Check if WDS workspace exists
 	_, err := client.TenancyV1alpha1().Workspaces().Get(ctx, wdsName, metav1.GetOptions{})
@@ -158,16 +177,6 @@ func verifyOrCreateWDS(client *kcpclientset.Clientset, ctx context.Context, logg
 	return nil
 }
 
-// apiVersion: apis.kcp.io/v1alpha1
-// kind: APIBinding
-// metadata:
-//   name: BINDING_NAME
-// spec:
-//   reference:
-//	 export:
-//	   path: PATH_NAME
-//	   name: EXPORT_NAME
-// Create an APIBinding
-func createAPIBinding() error {
+func verifyKubeAPIBindings() error {
 	return nil
 }
