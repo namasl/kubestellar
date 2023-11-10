@@ -29,7 +29,7 @@ import (
 // Create Cobra sub-command for 'kubectl kubestellar remove'
 var RemoveCmd = &cobra.Command{
     Use:    "remove",
-    Aliases: []string{"rm"},
+    Aliases: []string{"rm", "delete"},
     Short:  "Remove a KubeStellar object",
 //    Args:  cobra.ExactArgs(1),
     // If an invalid sub-command is sent, the function in RunE will execute.
