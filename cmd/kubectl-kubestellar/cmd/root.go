@@ -77,7 +77,6 @@ var completionCmd = &cobra.Command{
 	},
 }
 
-// add sub-commands to root
 func init() {
 	// Get config flags with default values.
 	// Passing "true" will "use persistent client config, rest mapper,

@@ -61,7 +61,7 @@ func newGetInternalKubeconfig(cliOpts *genericclioptions.ConfigFlags) *cobra.Com
 	// Make wds command
 	cmdGetInternalKubeconfig := &cobra.Command{
 		Use:     "get-internal-kubeconfig",
-		Aliases: []string{"gek"},
+		Aliases: []string{"gik"},
 		Short:   "Get KubeStellar kubectl configuration from inside same cluster",
 		Args:    cobra.ExactArgs(0),
 		RunE:    func(cmd *cobra.Command, args []string) error {
