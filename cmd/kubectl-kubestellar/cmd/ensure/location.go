@@ -244,7 +244,7 @@ func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Contex
 		return err
 	}
 
-	// APIBinding does not exist, must create
+	// APIBinding does not exist, create it
 	logger.Info(fmt.Sprintf("No APIBinding edge.kubestellar.io in workspace root:%s, creating it", imw))
 
 	apiBinding := v1alpha1.APIBinding {
@@ -270,7 +270,10 @@ func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Contex
 	}
 
 	// Wait for new APIBinding
-	// TODO find a way to wait until ready, and timeout after some period
+	// TODO find a way to wait until ready, and timeout after some period.
+	// Without this wait the subsequent attempt to look for a SyncTarget will
+	// fail, but we'll at least print an informative message if this wait
+	// is not long enough.
 	time.Sleep(5 * time.Second)
 
 	return nil
