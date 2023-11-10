@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -172,8 +173,14 @@ func verifyOrCreateWDS(client *kcpclientset.Clientset, ctx context.Context, logg
 		logger.Info(fmt.Sprintf("Failed to create WDS workspace %s", wdsName))
 		return err
 	}
+
+	// Wait for workspace to become ready
+	// TODO find a way to wait until ready, and timeout after some period.
+	time.Sleep(5 * time.Second)
+
 	return nil
 }
+
 // Check for Kube APIBindings
 // If withKube is true, create any bindings that don't exist
 // If withKube is false, delete any bindings that exist

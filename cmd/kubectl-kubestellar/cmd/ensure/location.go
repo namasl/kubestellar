@@ -23,7 +23,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	//"reflect"
 	"regexp"
 	"strings"
 
@@ -452,71 +451,6 @@ func verifyLocationLabels(location *v2alpha1.Location, client *clientset.Clients
 	}
 	return nil
 }
-
-/*
-type objectInterface struct {
-	metav1.ObjectMeta
-}
-
-// Check that SyncTarget or Location has user provided key=value pairs, add them if not
-func verifyObjectLabels(object *objectInterface, client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string, labels []string) error {
-	updateObject := false // bool to see if we need to update object
-	var objectStr string
-	switch reflect.TypeOf(object) {
-	case reflect.TypeOf(&v2alpha1.Location{}):
-		objectStr = "Location"
-	case reflect.TypeOf(&v2alpha1.SyncTarget{}):
-		objectStr = "SyncTarget"
-	default:
-		// Invalid type, developer did something wrong, barf on them
-		panic(0)
-	}
-	// Check for labels missing or not matching those provide by user
-	for _, labelString := range labels {
-		// Split raw label string into key and value
-		labelSlice := strings.Split(labelString, "=")
-		key := labelSlice[0]
-		value := labelSlice[1]
-		// Make sure we have a labels field
-		if object.ObjectMeta.Labels == nil {
-			// There are no labels, create the label map with first label
-			logger.Info(fmt.Sprintf("%s is missing labels, adding it", objectStr))
-			logger.Info(fmt.Sprintf("%s label %s=, updating value to %s", objectStr, key, value))
-			object.ObjectMeta.Labels = map[string]string{key: value}
-			updateObject = true
-			continue
-		}
-		valueCurrent := object.ObjectMeta.Labels[key]
-		// Make sure label matches user provided value
-		if valueCurrent != value {
-			logger.Info(fmt.Sprintf("%s label %s=%s, updating value to %s", objectStr, key, valueCurrent, value))
-			object.ObjectMeta.Labels[key] = value
-			updateObject = true
-		} else {
-			logger.Info(fmt.Sprintf("%s has label %s=%s", objectStr, key, value))
-		}
-	}
-	// Update object if needed
-	if updateObject {
-		var err error
-		// Apply updates to object
-		switch reflect.TypeOf(object) {
-		case reflect.TypeOf(&v2alpha1.Location{}):
-			_, err = client.EdgeV2alpha1().Locations().Update(ctx, object.(&v2alpha1.Location), metav1.UpdateOptions{})
-		case reflect.TypeOf(&v2alpha1.SyncTarget{}):
-			_, err = client.EdgeV2alpha1().SyncTargets().Update(ctx, object, metav1.UpdateOptions{})
-		default:
-			// It should be impossible to get here
-			panic(0)
-		}
-		if err != nil {
-			logger.Info(fmt.Sprintf("Failed to update %s %s in workspace root:%s", objectStr, locationName, imw))
-			return err
-		}
-	}
-	return nil
-}
-*/
 
 // Check if default Location exists, delete it if so
 func verifyNoDefaultLocation(client *clientset.Clientset, ctx context.Context, logger klog.Logger) error {
