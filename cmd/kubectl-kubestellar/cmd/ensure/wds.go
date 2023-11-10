@@ -26,6 +26,8 @@ import (
 	"github.com/spf13/pflag"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/klog/v2"
 
@@ -150,14 +152,14 @@ func verifyOrCreateWDS(client *kcpclientset.Clientset, ctx context.Context, logg
 		logger.Info(fmt.Sprintf("Found WDS workspace %s", wdsName))
 		return err
 	}
-	if err.Error() != fmt.Sprintf("workspaces.tenancy.kcp.io \"%s\" not found", wdsName) {
+	if ! apierrors.IsNotFound(err) {
 		// Some error other than a non-existant workspace
 		logger.Error(err, fmt.Sprintf("Error checking for WDS %s", wdsName))
 		return err
 	}
 
 	// WDS workspace does not exist, create it
-	logger.Error(err, fmt.Sprintf("No WDS workspace %s, creating it", wdsName))
+	logger.Info(fmt.Sprintf("No WDS workspace %s, creating it", wdsName))
 
 	workspace := &tenancyv1alpha1.Workspace {
 		TypeMeta: metav1.TypeMeta {
@@ -175,8 +177,23 @@ func verifyOrCreateWDS(client *kcpclientset.Clientset, ctx context.Context, logg
 	}
 
 	// Wait for workspace to become ready
-	// TODO find a way to wait until ready, and timeout after some period.
-	time.Sleep(5 * time.Second)
+	wait.Poll(time.Millisecond*100, time.Second*5, func() (bool, error) {
+		// See if we can get new workspace
+		if _, err := client.TenancyV1alpha1().Workspaces().Get(ctx, wdsName, metav1.GetOptions{}); err != nil {
+			if apierrors.IsNotFound(err) {
+				// Failed to get due to not found, try until timeout
+				return false, nil
+			}
+			// Some error happened beyond not finding the workspace
+			return false, err
+		}
+		// We got the workspace, we're good to go
+		return true, nil
+	})
+	if err != nil {
+		logger.Error(err, fmt.Sprintf("Problem waiting for WDS workspace %s", wdsName))
+		return err
+	}
 
 	return nil
 }
@@ -233,7 +250,7 @@ func deleteAPIBinding(client *kcpclientset.Clientset, ctx context.Context, logge
 	if err == nil {
 		logger.Info(fmt.Sprintf("Removed APIBinding %s", bindName))
 		return err
-	} else if err.Error() != fmt.Sprintf("apibindings.apis.kcp.io \"%s\" not found", bindName) {
+	} else if ! apierrors.IsNotFound(err) {
 		// Some error other than a non-existant APIBinding
 		logger.Info(fmt.Sprintf("Problem removing APIBinding %s", bindName))
 		return err

@@ -25,7 +25,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/klog/v2"
 
@@ -79,7 +82,7 @@ func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Contex
 	if err == nil {
 		logger.Info(fmt.Sprintf("Found APIBinding %s", bindName))
 		return err
-	} else if err.Error() != fmt.Sprintf("apibindings.apis.kcp.io \"%s\" not found", bindName) {
+	} else if ! apierrors.IsNotFound(err) {
 		// Some error other than a non-existant APIBinding
 		logger.Info(fmt.Sprintf("Problem checking for APIBinding %s", bindName))
 		return err
@@ -111,12 +114,24 @@ func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Contex
 		return err
 	}
 
-	// Wait for new APIBinding
-	// TODO find a way to wait until ready, and timeout after some period.
-	// Without this wait the subsequent attempt to look for a SyncTarget will
-	// fail, but we'll at least print an informative message if this wait
-	// is not long enough.
-	time.Sleep(5 * time.Second)
+	// Wait for new APIBinding, or timeout
+	wait.Poll(time.Millisecond*100, time.Second*5, func() (bool, error) {
+		// See if we can get new APIBinding
+		if _, err := client.ApisV1alpha1().APIBindings().Get(ctx, bindName, metav1.GetOptions{}); err != nil {
+			if apierrors.IsNotFound(err) {
+				// Failed to get due to not found, try until timeout
+				return false, nil
+			}
+			// Some error happened beyond not finding the APIBinding
+			return false, err
+		}
+		// We got the APIBinding, we're good to go
+		return true, nil
+	})
+	if err != nil {
+		logger.Error(err, fmt.Sprintf("Problem waiting for APIBinding %s", bindName))
+		return err
+	}
 
 	return nil
 }

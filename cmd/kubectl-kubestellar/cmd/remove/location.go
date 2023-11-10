@@ -26,6 +26,7 @@ import (
 	"github.com/spf13/pflag"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/klog/v2"
 
@@ -118,7 +119,7 @@ func deleteSyncTarget(client *clientset.Clientset, ctx context.Context, logger k
 	if err == nil {
 		logger.Info(fmt.Sprintf("Removed SyncTarget %s from workspace root:%s", syncTargetName, imw))
 		return err
-	} else if err.Error() != fmt.Sprintf("synctargets.edge.kubestellar.io \"%s\" not found", syncTargetName) {
+	} else if ! apierrors.IsNotFound(err) {
 		// Some error other than a non-existant workspace
 		logger.Info(fmt.Sprintf("Problem removing SyncTarget %s from workspace root:%s", syncTargetName, imw))
 		return err
@@ -134,7 +135,7 @@ func deleteLocation(client *clientset.Clientset, ctx context.Context, logger klo
 	if err == nil {
 		logger.Info(fmt.Sprintf("Removed Location %s from workspace root:%s", locationName, imw))
 		return err
-	} else if err.Error() != fmt.Sprintf("locations.edge.kubestellar.io \"%s\" not found", locationName) {
+	} else if ! apierrors.IsNotFound(err) {
 		// Some error other than a non-existant workspace
 		logger.Info(fmt.Sprintf("Problem removing Location %s from workspace root:%s", locationName, imw))
 		return err

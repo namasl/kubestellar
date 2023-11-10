@@ -30,6 +30,7 @@ import (
 	"github.com/spf13/pflag"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/klog/v2"
 
@@ -242,13 +243,7 @@ func verifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, 
 		// Check that SyncTarget has user provided key=value pairs, add them if not
 		err = verifySyncTargetLabels(syncTarget, client, ctx, logger, locationName, labels)
 		return err
-	// TODO is converting err to a string the right way to check this?
-	} else if err.Error() == fmt.Sprintf("the server could not find the requested resource (get synctargets.edge.kubestellar.io %s)", locationName) {
-		logger.Info(fmt.Sprintf("*** APIBinding has probably not yet spun up %s in workspace root:%s ***", locationName, imw))
-		logger.Info("*** Try re-running ensure command ***")
-		return err
-	// TODO is converting err to a string the right way to check this?
-	} else if err.Error() != fmt.Sprintf("synctargets.edge.kubestellar.io \"%s\" not found", locationName) {
+	} else if ! apierrors.IsNotFound(err) {
 		// Some error other than a non-existant SyncTarget
 		logger.Info(fmt.Sprintf("Problem checking for SyncTarget %s in workspace root:%s", locationName, imw))
 		return err
@@ -361,8 +356,7 @@ func verifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, lo
 		// Check that Location has user provided key=value pairs, add them if not
 		err = verifyLocationLabels(location, client, ctx, logger, locationName, labels)
 		return err
-	// TODO is converting err to a string the right way to check this?
-	} else if err.Error() != fmt.Sprintf("locations.edge.kubestellar.io \"%s\" not found", locationName) {
+	} else if ! apierrors.IsNotFound(err) {
 		// Some error other than a non-existant SyncTarget
 		logger.Info(fmt.Sprintf("Problem checking for Location %s in workspace root:%s", locationName, imw))
 		return err
@@ -458,8 +452,7 @@ func verifyNoDefaultLocation(client *clientset.Clientset, ctx context.Context, l
 	_, err := client.EdgeV2alpha1().Locations().Get(ctx, "default", metav1.GetOptions{})
 	if err != nil {
 		// Check if error is due to the lack of a "default" location object (what we want)
-		// TODO is converting err to a string the right way to check this?
-		if err.Error() == "locations.edge.kubestellar.io \"default\" not found" {
+		if apierrors.IsNotFound(err) {
 			logger.Info(fmt.Sprintf("Verified no default Location in workspace root:%s", imw))
 			return nil
 		}

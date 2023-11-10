@@ -25,6 +25,7 @@ import (
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 
 	kcpclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
@@ -100,7 +101,7 @@ func deleteWorkspace(client *kcpclientset.Clientset, ctx context.Context, logger
 	if err == nil {
 		logger.Info(fmt.Sprintf("Removed workspace %s", wsName))
 		return err
-	} else if err.Error() != fmt.Sprintf("workspaces.tenancy.kcp.io \"%s\" not found", wsName) {
+	} else if ! apierrors.IsNotFound(err) {
 		// Some error other than a non-existant workspace
 		logger.Info(fmt.Sprintf("Problem removing workspace %s", wsName))
 		return err
