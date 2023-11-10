@@ -218,6 +218,7 @@ func verifyKubeAPIBindings(client *kcpclientset.Clientset, ctx context.Context, 
 	return nil
 }
 
+// Delete an API binding, don't return an error if it doesn't exist
 func deleteAPIBinding(client *kcpclientset.Clientset, ctx context.Context, logger klog.Logger, bindName string) error {
 	// Delete the APIBinding
 	err := client.ApisV1alpha1().APIBindings().Delete(ctx, bindName, metav1.DeleteOptions{})
