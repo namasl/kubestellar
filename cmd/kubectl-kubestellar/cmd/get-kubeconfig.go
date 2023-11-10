@@ -102,11 +102,15 @@ func init() {
 	rootCmd.AddCommand(newGetInternalKubeconfig(cliOpts))
 }
 
-func getKubeconfig(cmdGetExternalKubeconfig *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string, isInternal bool) error {
+func getKubeconfig(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string, isInternal bool) error {
 	ctx := context.Background()
 	logger := klog.FromContext(ctx)
 
-    fmt.Println("GEK!")
-    logger.V(1).Info("222")
+	// Print all flags and their values if verbosity level is at least 1
+	cmdGetKubeconfig.Flags().VisitAll(func(flg *pflag.Flag) {
+		logger.V(1).Info(fmt.Sprintf("Command line flag %s=%s", flg.Name, flg.Value))
+	})
+
+
     return nil
 }
