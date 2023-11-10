@@ -55,7 +55,7 @@ func newCmdRemoveLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command
 		},
 	}
 
-	// add flag for IMW workspace
+	// Add flag for IMW workspace
 	cmdLocation.Flags().StringVar(&imw, "imw", "", "IMW workspace")
 	cmdLocation.MarkFlagRequired("imw")
 	return cmdLocation

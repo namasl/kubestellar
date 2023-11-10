@@ -39,7 +39,7 @@ import (
 // Create Cobra sub-command for 'kubectl kubestellar ensure'
 var EnsureCmd = &cobra.Command{
 	Use:	"ensure",
-	Short:  "Ensure a KubeStellar object is correctly set up",
+	Short:  "Ensure a KubeStellar object is correctly configured",
 //	Args:  cobra.ExactArgs(1),
 	// If an invalid sub-command is sent, the function in RunE will execute.
 	// Use this to inform of invalid arguments, and return an error.
