@@ -31,7 +31,7 @@ import (
 	tenancyv1alpha1 "github.com/kcp-dev/kcp/pkg/apis/tenancy/v1alpha1"
 	kcpclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
 
-	"github.com/kubestellar/kubestellar/pkg/apis/meta/v1alpha1"
+	//"github.com/kubestellar/kubestellar/pkg/apis/meta/v1alpha1"
 	clientopts "github.com/kubestellar/kubestellar/pkg/client-options"
 )
 
@@ -141,16 +141,20 @@ func verifyOrCreateWDS(client *kcpclientset.Clientset, ctx context.Context, logg
 	// WDS workspace does not exist, create it
 	logger.Error(err, fmt.Sprintf("No WDS workspace %s, creating it", wdsName))
 
-// "kind":"Workspace",
-// "apiVersion":"tenancy.kcp.io/v1alpha1",
-// "metadata":{"name":"wmw2"}
-
-	workspace := tenancyv1alpha1.Workspace {
-
+	workspace := &tenancyv1alpha1.Workspace {
+		TypeMeta: metav1.TypeMeta {
+			Kind: "Workspace",
+			APIVersion: "tenancy.kcp.io/v1alpha1",
+		},
 		ObjectMeta: metav1.ObjectMeta {
+			Name: wdsName,
 		},
 	}
-
+	_, err = client.TenancyV1alpha1().Workspaces().Create(ctx, workspace, metav1.CreateOptions{})
+	if err != nil {
+		logger.Info(fmt.Sprintf("Failed to create WDS workspace %s", wdsName))
+		return err
+	}
 	return nil
 }
 
@@ -167,4 +171,3 @@ func verifyOrCreateWDS(client *kcpclientset.Clientset, ctx context.Context, logg
 func createAPIBinding() error {
 	return nil
 }
-
