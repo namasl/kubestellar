@@ -43,7 +43,7 @@ func newCmdRemoveLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command
 		Aliases: []string{"loc"},
 		Short:   "Delete an inventory entry for a given WEC",
 		Args:    cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE:    func(cmd *cobra.Command, args []string) error {
 			// At this point set silence usage to true, so that any errors
 			// following do not result in the help being printed. We only
 			// want the help to be displayed when the error is due to an
@@ -109,7 +109,7 @@ func removeLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 		logger.Error(err, fmt.Sprintf("Failed to delete SyncTarget %s from workspace root:%s", locationName, imw))
 		return err
 	}
-    logger.Info(fmt.Sprintf("Removed SyncTarget %s from workspace root:%s", locationName, imw))
+	logger.Info(fmt.Sprintf("Removed SyncTarget %s from workspace root:%s", locationName, imw))
 
 	// Delete the Location object
 	err = client.EdgeV2alpha1().Locations().Delete(ctx, locationName, metav1.DeleteOptions{})
@@ -117,7 +117,7 @@ func removeLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 		logger.Error(err, fmt.Sprintf("Failed to delete Location %s from workspace root:%s", locationName, imw))
 		return err
 	}
-    logger.Info(fmt.Sprintf("Removed Location %s from workspace root:%s", locationName, imw))
+	logger.Info(fmt.Sprintf("Removed Location %s from workspace root:%s", locationName, imw))
 
 	return nil
 }

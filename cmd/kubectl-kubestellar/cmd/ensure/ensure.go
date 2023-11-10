@@ -16,35 +16,35 @@ limitations under the License.
 package ensure
 
 import (
-    "fmt"
-    "errors"
-    "flag"
+	"fmt"
+	"errors"
+	"flag"
 
-    "github.com/spf13/cobra"
-    "github.com/spf13/pflag"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
 // Create Cobra sub-command for 'kubectl kubestellar ensure'
 var EnsureCmd = &cobra.Command{
-    Use:    "ensure",
-    Short:  "Ensure a KubeStellar object is correctly set up",
-//    Args:  cobra.ExactArgs(1),
-    // If an invalid sub-command is sent, the function in RunE will execute.
-    // Use this to inform of invalid arguments, and return an error.
-    RunE: func(cmd *cobra.Command, args []string) error {
-        if len(args) > 0 {
-            return errors.New(fmt.Sprintf("Invalid sub-command for 'ensure': %s\n", args[0]))
-        } else {
-            return errors.New(fmt.Sprintf("Missing sub-command for 'ensure'\n"))
-        }
-    },
+	Use:	"ensure",
+	Short:  "Ensure a KubeStellar object is correctly set up",
+//	Args:  cobra.ExactArgs(1),
+	// If an invalid sub-command is sent, the function in RunE will execute.
+	// Use this to inform of invalid arguments, and return an error.
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			return errors.New(fmt.Sprintf("Invalid sub-command for 'ensure': %s\n", args[0]))
+		} else {
+			return errors.New(fmt.Sprintf("Missing sub-command for 'ensure'\n"))
+		}
+	},
 }
 
 func init() {
 	// Get config flags with default values.
-    // Passing "true" will "use persistent client config, rest mapper,
+	// Passing "true" will "use persistent client config, rest mapper,
 	// discovery client, and propagate them to the places that need them,
 	// rather than instantiating them multiple times."
 	cliOpts := genericclioptions.NewConfigFlags(true)
@@ -53,14 +53,14 @@ func init() {
 	// Add cliOpts flags to fs (flow from syntax is confusing, goes -->)
 	cliOpts.AddFlags(fs)
 
-    // Add logging flags to fs
-    fs.AddGoFlagSet(flag.CommandLine)
-    // Add flags to our command; make these persistent (available to this
-    // command and all sub-commands)
-    EnsureCmd.PersistentFlags().AddFlagSet(fs)
+	// Add logging flags to fs
+	fs.AddGoFlagSet(flag.CommandLine)
+	// Add flags to our command; make these persistent (available to this
+	// command and all sub-commands)
+	EnsureCmd.PersistentFlags().AddFlagSet(fs)
 
-    // Add location sub-command
-    EnsureCmd.AddCommand(newCmdEnsureLocation(cliOpts))
-    // Add wds sub-command
-    EnsureCmd.AddCommand(newCmdEnsureWds(cliOpts))
+	// Add location sub-command
+	EnsureCmd.AddCommand(newCmdEnsureLocation(cliOpts))
+	// Add wds sub-command
+	EnsureCmd.AddCommand(newCmdEnsureWds(cliOpts))
 }

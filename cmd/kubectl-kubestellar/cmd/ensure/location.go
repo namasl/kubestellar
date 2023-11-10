@@ -56,7 +56,7 @@ func newCmdEnsureLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command
 		// but more descriptive error messages will be provided by leaving this
 		// set to 1.
 		Args:    cobra.MinimumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE:    func(cmd *cobra.Command, args []string) error {
 			// At this point set silence usage to true, so that any errors
 			// following do not result in the help being printed. We only
 			// want the help to be displayed when the error is due to an
@@ -124,8 +124,8 @@ func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.Confi
 	config.Host += ":" + imw
 	logger.V(1).Info(fmt.Sprintf("Set host to %s", config.Host))
 
-    // Create client-go instance from config
-    kcpClient, err := kcpclientset.NewForConfig(config)
+	// Create client-go instance from config
+	kcpClient, err := kcpclientset.NewForConfig(config)
 	if err != nil {
 		logger.Error(err, "Failed create client-go instance")
 		return err
@@ -236,7 +236,7 @@ func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Contex
 	// Get the APIBinding
 	_, err := client.ApisV1alpha1().APIBindings().Get(ctx, "edge.kubestellar.io", metav1.GetOptions{})
 	if err == nil {
-    	logger.Info(fmt.Sprintf("Found APIBinding edge.kubestellar.io in workspace root:%s", imw))
+		logger.Info(fmt.Sprintf("Found APIBinding edge.kubestellar.io in workspace root:%s", imw))
 		return err
 	} else if err.Error() != "apibindings.apis.kcp.io \"edge.kubestellar.io\" not found" {
 		// Some error other than a non-existant APIBinding
@@ -265,7 +265,7 @@ func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Contex
 	}
 	_, err = client.ApisV1alpha1().APIBindings().Create(ctx, &apiBinding, metav1.CreateOptions{})
 	if err != nil {
-    	logger.Error(err, fmt.Sprintf("Failed to create APIBinding in workspace root:%s", imw))
+		logger.Error(err, fmt.Sprintf("Failed to create APIBinding in workspace root:%s", imw))
 		return err
 	}
 

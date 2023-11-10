@@ -22,7 +22,7 @@ import (
 	"flag"
 
 	"github.com/spf13/cobra"
-    "github.com/spf13/pflag"
+	"github.com/spf13/pflag"
 
 	"k8s.io/klog/v2"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -43,28 +43,28 @@ import (
 // generator command with a dummy function.
 // See https://github.com/spf13/cobra/issues/2017
 var rootCmd = &cobra.Command{
-	Use:	"kubectl\u00A0kubestellar",
-	Short:	"KubeStellar plugin for kubectl",
-	Long:	`KubeStellar is a flexible solution for challenges associated with multi-cluster 
+	Use:   "kubectl\u00A0kubestellar",
+	Short: "KubeStellar plugin for kubectl",
+	Long:  `KubeStellar is a flexible solution for challenges associated with multi-cluster 
 configuration management for edge, multi-cloud, and hybrid cloud.
 This command provides the kubestellar sub-command for kubectl.`,
-    Args:  cobra.ExactArgs(1),
+	Args:  cobra.ExactArgs(1),
 //	SilenceUsage: true,
-    // If an invalid sub-command is sent, the function in RunE will execute.
-    // Use this to inform of invalid arguments, and return an error.
+	// If an invalid sub-command is sent, the function in RunE will execute.
+	// Use this to inform of invalid arguments, and return an error.
 	// For details on inconsistent error behavior, see
 	// https://github.com/spf13/cobra/issues/706
-    RunE: func(cmd *cobra.Command, args []string) error {
-        if len(args) > 0 {
+	RunE:  func(cmd *cobra.Command, args []string) error {
+		if len(args) > 0 {
 			// TODO, this only runs if "Args:  cobra.ExactArgs(1)" is set; if not
 			// set the error message is brief and does not print the help.
-            return errors.New(fmt.Sprintf("Invalid kubestellar sub-command: %s\n", args[0]))
-        } else {
+			return errors.New(fmt.Sprintf("Invalid kubestellar sub-command: %s\n", args[0]))
+		} else {
 			// TODO, does not run if "Args:  cobra.ExactArgs(1)" is set, although
 			// the error message printed is acceptable.
-            return errors.New(fmt.Sprintf("Missing kubestellar sub-command\n"))
-        }
-    },
+			return errors.New(fmt.Sprintf("Missing kubestellar sub-command\n"))
+		}
+	},
 }
 
 // Dummy function to disable auto-completion script generation, since this
@@ -72,15 +72,15 @@ This command provides the kubestellar sub-command for kubectl.`,
 var completionCmd = &cobra.Command{
 	Use:	"completion",
 	Short:	"Generate the autocompletion script for the specified shell",
-    RunE: func(cmd *cobra.Command, args []string) error {
-        return errors.New(fmt.Sprintf("Not implemented\n"))
-    },
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return errors.New(fmt.Sprintf("Not implemented\n"))
+	},
 }
 
 // add sub-commands to root
 func init() {
 	// Get config flags with default values.
-    // Passing "true" will "use persistent client config, rest mapper,
+	// Passing "true" will "use persistent client config, rest mapper,
 	// discovery client, and propagate them to the places that need them,
 	// rather than instantiating them multiple times."
 	cliOpts := genericclioptions.NewConfigFlags(true)
@@ -89,18 +89,18 @@ func init() {
 	// Add cliOpts flags to fs (flow from syntax is confusing, goes -->)
 	cliOpts.AddFlags(fs)
 
-    // Allow logging to pick up flags
-    klog.InitFlags(flag.CommandLine)
-    // Add logging flags to fs
-    fs.AddGoFlagSet(flag.CommandLine)
-    // Add flags to our command; make these persistent (available to this
-    // command and all sub-commands)
-    rootCmd.PersistentFlags().AddFlagSet(fs)
+	// Allow logging to pick up flags
+	klog.InitFlags(flag.CommandLine)
+	// Add logging flags to fs
+	fs.AddGoFlagSet(flag.CommandLine)
+	// Add flags to our command; make these persistent (available to this
+	// command and all sub-commands)
+	rootCmd.PersistentFlags().AddFlagSet(fs)
 
 	// Add sub-commands
-    rootCmd.AddCommand(ensure.EnsureCmd)
-    rootCmd.AddCommand(remove.RemoveCmd)
-    rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(ensure.EnsureCmd)
+	rootCmd.AddCommand(remove.RemoveCmd)
+	rootCmd.AddCommand(completionCmd)
 }
 
 // Function for executing root command

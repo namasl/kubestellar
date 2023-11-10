@@ -16,36 +16,35 @@ limitations under the License.
 package remove
 
 import (
-    "fmt"
-    "errors"
-    "flag"
+	"fmt"
+	"errors"
+	"flag"
 
-    "github.com/spf13/cobra"
-    "github.com/spf13/pflag"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
 // Create Cobra sub-command for 'kubectl kubestellar remove'
 var RemoveCmd = &cobra.Command{
-    Use:    "remove",
-    Aliases: []string{"rm", "delete"},
-    Short:  "Remove a KubeStellar object",
-//    Args:  cobra.ExactArgs(1),
-    // If an invalid sub-command is sent, the function in RunE will execute.
-    // Use this to inform of invalid arguments, and return an error.
-    RunE: func(cmd *cobra.Command, args []string) error {
-        if len(args) > 0 {
-            return errors.New(fmt.Sprintf("Invalid sub-command for 'remove': %s\n", args[0]))
-        } else {
-            return errors.New(fmt.Sprintf("Missing sub-command for 'remove'\n"))
-        }
-    },
+	Use:     "remove",
+	Aliases: []string{"rm", "delete"},
+	Short:   "Remove a KubeStellar object",
+	// If an invalid sub-command is sent, the function in RunE will execute.
+	// Use this to inform of invalid arguments, and return an error.
+	RunE:    func(cmd *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			return errors.New(fmt.Sprintf("Invalid sub-command for 'remove': %s\n", args[0]))
+		} else {
+			return errors.New(fmt.Sprintf("Missing sub-command for 'remove'\n"))
+		}
+	},
 }
 
 func init() {
 	// Get config flags with default values.
-    // Passing "true" will "use persistent client config, rest mapper,
+	// Passing "true" will "use persistent client config, rest mapper,
 	// discovery client, and propagate them to the places that need them,
 	// rather than instantiating them multiple times."
 	cliOpts := genericclioptions.NewConfigFlags(true)
@@ -53,16 +52,16 @@ func init() {
 	fs := pflag.NewFlagSet("rm", pflag.ExitOnError)
 	// Add cliOpts flags to fs (flow from syntax is confusing, goes -->)
 	cliOpts.AddFlags(fs)
-    // Allow logging to pick up flags
-//    klog.InitFlags(flag.CommandLine)
-    // Add logging flags to fs
-    fs.AddGoFlagSet(flag.CommandLine)
-    // Add flags to our command; make these persistent (available to this
-    // command and all sub-commands)
-    RemoveCmd.PersistentFlags().AddFlagSet(fs)
+	// Allow logging to pick up flags
+//	klog.InitFlags(flag.CommandLine)
+	// Add logging flags to fs
+	fs.AddGoFlagSet(flag.CommandLine)
+	// Add flags to our command; make these persistent (available to this
+	// command and all sub-commands)
+	RemoveCmd.PersistentFlags().AddFlagSet(fs)
 
-    // Add location sub-command
-    RemoveCmd.AddCommand(newCmdRemoveLocation(cliOpts))
-    // Add wds sub-command
-    RemoveCmd.AddCommand(newCmdRemoveWds(cliOpts))
+	// Add location sub-command
+	RemoveCmd.AddCommand(newCmdRemoveLocation(cliOpts))
+	// Add wds sub-command
+	RemoveCmd.AddCommand(newCmdRemoveWds(cliOpts))
 }
