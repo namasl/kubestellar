@@ -32,15 +32,17 @@ import (
 )
 
 // Root kubestellar command
-// TODO the usage section of help will not show "kubectl" prefixing the
+// HACK the usage section of help will not show "kubectl" prefixing the
 // command string if the "Use" key is set to just "kubestellar". If the "Use"
 // key is set to "kubectl kubestellar", then "kubestellar" gets dropped from
 // the usage command string. This is an open issue in Cobra for kubectl plugins.
 // The workaround is to add "kubectl" along with a non-breaking space to the
 // "Use" string, but this will break the autocompletion script generator.
-// Having accurate help is probably more important, so we will ensure the help
-// prints the full command string, and we will disable the "completion" script
-// generator command with a dummy function.
+// Luckily, the help printed to the screen does contain a regular space that
+// can be copied and pasted without issue.
+// Having accurate help is more important than autocompletion, so we will ensure
+// help prints the full command string, and we will disable the "completion"
+// script generator command with a dummy function.
 // See https://github.com/spf13/cobra/issues/2017
 var rootCmd = &cobra.Command{
 	Use:   "kubectl\u00A0kubestellar",
@@ -49,19 +51,18 @@ var rootCmd = &cobra.Command{
 configuration management for edge, multi-cloud, and hybrid cloud.
 This command provides the kubestellar sub-command for kubectl.`,
 	Args:  cobra.ExactArgs(1),
-//	SilenceUsage: true,
 	// If an invalid sub-command is sent, the function in RunE will execute.
 	// Use this to inform of invalid arguments, and return an error.
 	// For details on inconsistent error behavior, see
 	// https://github.com/spf13/cobra/issues/706
 	RunE:  func(cmd *cobra.Command, args []string) error {
 		if len(args) > 0 {
-			// TODO, this only runs if "Args:  cobra.ExactArgs(1)" is set; if not
+			// NOTE this only runs if "Args:  cobra.ExactArgs(1)" is set; if not
 			// set the error message is brief and does not print the help.
 			return errors.New(fmt.Sprintf("Invalid kubestellar sub-command: %s\n", args[0]))
 		} else {
-			// TODO, does not run if "Args:  cobra.ExactArgs(1)" is set, although
-			// the error message printed is acceptable.
+			// NOTE this does not run if "Args:  cobra.ExactArgs(1)" is set,
+			// although the error message printed is acceptable.
 			return errors.New(fmt.Sprintf("Missing kubestellar sub-command\n"))
 		}
 	},
