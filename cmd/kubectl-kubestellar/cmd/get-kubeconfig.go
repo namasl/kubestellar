@@ -20,19 +20,23 @@ package cmd
 
 import (
     "context"
-//	"errors"
+	"errors"
     "fmt"
 	"flag"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 )
 
-const ksNamespace = "kubestellar" // Namespace the KubeStellar pods are running in
 const ksContext = "ks-core" // Context for interacting with KubeStellar componnet pods
+const ksNamespace = "kubestellar" // Namespace the KubeStellar pods are running in
+const ksSelector = "app=kubestellar" // Selector (label query) for KubeStellar pods
+
 var fname string // Filename/path for output configuration file (--output flag)
 
 // Create the Cobra sub-command for 'kubectl kubestellar get-external-kubeconfig'
@@ -116,7 +120,53 @@ func getKubeconfig(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 		logger.V(1).Info(fmt.Sprintf("Command line flag %s=%s", flg.Name, flg.Value))
 	})
 
+	// Get client config from flags
+	config, err := cliOpts.ToRESTConfig()
+	if err != nil {
+		logger.Error(err, "Failed to get config from flags")
+		return err
+	}
+
+	// Create client-go instance from config
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		logger.Error(err, "Failed create client-go instance")
+		return err
+	}
+
+	// Get name of KubeStellar server pod
+	serverPodName, err := getServerPodName(client, ctx, logger)
+
+	logger.Info(fmt.Sprintf("Found KubeStellar server pod %s", serverPodName))
+	if err != nil {
+		return err
+	}
+
 
 
     return nil
+}
+
+// Get name of pod running KubeStellar server
+func getServerPodName(client *kubernetes.Clientset, ctx context.Context, logger klog.Logger) (string, error) {
+	// Get list of pods matching selector in given namespace
+	podList, err := client.CoreV1().Pods(ksNamespace).List(ctx, metav1.ListOptions{LabelSelector: ksSelector})
+	if err != nil {
+		logger.Error(err, "Failed create client-go instance")
+		return "", err
+	}
+
+	// Make sure we get one matching pod
+	if len(podList.Items) == 0 {
+		err = errors.New("No server pods")
+		logger.Error(err, "Could not find a server pod in namespace %s with selector %s", ksNamespace, ksSelector)
+		return "", err
+	} else if len(podList.Items) > 1 {
+		err = errors.New("More than one server pod")
+		logger.Error(err, "Found %d server pods in namespace %s with selector %s", len(podList.Items), ksNamespace, ksSelector)
+		return "", err
+	}
+
+	// Return pod name
+	return podList.Items[0].Name, nil
 }
