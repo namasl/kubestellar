@@ -36,6 +36,8 @@ import (
 	kcpclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
 )
 
+const timeoutTime = 5 // Time (in seconds) to wait for a resource to become ready
+
 // Create Cobra sub-command for 'kubectl kubestellar ensure'
 var EnsureCmd = &cobra.Command{
 	Use:	"ensure",
@@ -70,9 +72,9 @@ func init() {
 	EnsureCmd.PersistentFlags().AddFlagSet(fs)
 
 	// Add location sub-command
-	EnsureCmd.AddCommand(newCmdEnsureLocation(cliOpts))
+	EnsureCmd.AddCommand(newCmdEnsureLocation())
 	// Add wds sub-command
-	EnsureCmd.AddCommand(newCmdEnsureWds(cliOpts))
+	EnsureCmd.AddCommand(newCmdEnsureWds())
 }
 
 // Check if an APIBinding exists, create if not
@@ -115,7 +117,7 @@ func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Contex
 	}
 
 	// Wait for new APIBinding, or timeout
-	wait.Poll(time.Millisecond*100, time.Second*5, func() (bool, error) {
+	wait.Poll(time.Millisecond*100, time.Second*timeoutTime, func() (bool, error) {
 		// See if we can get new APIBinding
 		if _, err := client.ApisV1alpha1().APIBindings().Get(ctx, bindName, metav1.GetOptions{}); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -126,6 +128,7 @@ func verifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Contex
 			return false, err
 		}
 		// We got the APIBinding, we're good to go
+		logger.Info(fmt.Sprintf("APIBinding %s ready", bindName))
 		return true, nil
 	})
 	if err != nil {

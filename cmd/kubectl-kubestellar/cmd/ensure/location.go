@@ -31,7 +31,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/klog/v2"
 
 	kcpclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
@@ -44,7 +43,7 @@ import (
 var imw string // IMW workspace path
 
 // Create the Cobra sub-command for 'kubectl kubestellar ensure location'
-func newCmdEnsureLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
+func newCmdEnsureLocation() *cobra.Command {
 	// Make location command
 	cmdLocation := &cobra.Command{
 		Use:     "location --imw <IMW_NAME> <LOCATION_NAME> <\"KEY=VALUE\" ...>",
@@ -60,7 +59,7 @@ func newCmdEnsureLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command
 			// want the help to be displayed when the error is due to an
 			// invalid command.
 			cmd.SilenceUsage = true
-			err := ensureLocation(cmd, cliOpts, args)
+			err := ensureLocation(cmd, args)
 			return err
 		},
 	}
@@ -83,7 +82,7 @@ func newCmdEnsureLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command
 // - Check for Location of provided name in IMW, create if not
 // - Ensure that Location has the labels provided by the user
 // - If Location "default" exists, delete it
-func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string) error {
+func ensureLocation(cmdLocation *cobra.Command, args []string) error {
 	locationName := args[0]
 	labels := args[1:]
 	ctx := context.Background()

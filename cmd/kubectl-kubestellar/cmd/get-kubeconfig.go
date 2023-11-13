@@ -14,11 +14,13 @@ limitations under the License.
 // This is the sub-command for getting the KubeStellar kubectl configuration.
 // "get-external-kubeconfig" is used when running externally to the cluster hosting Kubestellar.
 // "get-internal-kubeconfig" is used when running inside the same cluster as Kubestellar.
+// --output (-o) is a required flag for providing an output filename for the config file.
 
 package cmd
 
 import (
     "context"
+//	"errors"
     "fmt"
 	"flag"
 
@@ -29,7 +31,9 @@ import (
 	"k8s.io/klog/v2"
 )
 
-var fname string // Filename/path for output configuration file
+const ksNamespace = "kubestellar" // Namespace the KubeStellar pods are running in
+const ksContext = "ks-core" // Context for interacting with KubeStellar componnet pods
+var fname string // Filename/path for output configuration file (--output flag)
 
 // Create the Cobra sub-command for 'kubectl kubestellar get-external-kubeconfig'
 func newGetExternalKubeconfig(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
@@ -78,6 +82,7 @@ func newGetInternalKubeconfig(cliOpts *genericclioptions.ConfigFlags) *cobra.Com
 	// Add required flag for output filename (--output or -o)
 	cmdGetInternalKubeconfig.Flags().StringVarP(&fname, "output", "o", "", "Output path/filename")
 	cmdGetInternalKubeconfig.MarkFlagRequired("output")
+	cmdGetInternalKubeconfig.MarkFlagFilename("output")
 	return cmdGetInternalKubeconfig
 }
 
@@ -110,6 +115,7 @@ func getKubeconfig(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 	cmdGetKubeconfig.Flags().VisitAll(func(flg *pflag.Flag) {
 		logger.V(1).Info(fmt.Sprintf("Command line flag %s=%s", flg.Name, flg.Value))
 	})
+
 
 
     return nil

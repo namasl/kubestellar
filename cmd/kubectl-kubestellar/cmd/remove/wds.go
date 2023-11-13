@@ -23,7 +23,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"k8s.io/cli-runtime/pkg/genericclioptions"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
@@ -34,7 +33,7 @@ import (
 )
 
 // Create the Cobra sub-command for 'kubectl kubestellar remove wds'
-func newCmdRemoveWds(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
+func newCmdRemoveWds() *cobra.Command {
 	// Make wds command
 	cmdWds := &cobra.Command{
 		Use:     "wds <WDS_NAME>",
@@ -47,7 +46,7 @@ func newCmdRemoveWds(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 			// want the help to be displayed when the error is due to an
 			// invalid command.
 			cmd.SilenceUsage = true
-			err := removeWds(cmd, cliOpts, args)
+			err := removeWds(cmd, args)
 			return err
 		},
 	}
@@ -56,7 +55,7 @@ func newCmdRemoveWds(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 }
 
 // Perform the actual workload management workspace removal
-func removeWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string) error {
+func removeWds(cmdWds *cobra.Command, args []string) error {
 	wdsName := args[0] // name of WDS to remove
 	ctx := context.Background()
 	logger := klog.FromContext(ctx)
@@ -99,13 +98,13 @@ func deleteWorkspace(client *kcpclientset.Clientset, ctx context.Context, logger
 	// Delete the workspace
 	err := client.TenancyV1alpha1().Workspaces().Delete(ctx, wsName, metav1.DeleteOptions{})
 	if err == nil {
-		logger.Info(fmt.Sprintf("Removed workspace %s", wsName))
+		logger.Info(fmt.Sprintf("Removed workspace root:%s", wsName))
 		return err
 	} else if ! apierrors.IsNotFound(err) {
 		// Some error other than a non-existant workspace
-		logger.Info(fmt.Sprintf("Problem removing workspace %s", wsName))
+		logger.Info(fmt.Sprintf("Problem removing workspace root:%s", wsName))
 		return err
 	}
-	logger.Info(fmt.Sprintf("Verified no workspace %s", wsName))
+	logger.Info(fmt.Sprintf("Verified no workspace root:%s", wsName))
 	return nil
 }

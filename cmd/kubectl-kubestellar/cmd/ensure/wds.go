@@ -31,7 +31,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/klog/v2"
 
 	tenancyv1alpha1 "github.com/kcp-dev/kcp/pkg/apis/tenancy/v1alpha1"
@@ -40,10 +39,10 @@ import (
 	clientopts "github.com/kubestellar/kubestellar/pkg/client-options"
 )
 
-var withKube bool
+var withKube bool // Variable for --with-kube flag
 
 // Create the Cobra sub-command for 'kubectl kubestellar ensure wds'
-func newCmdEnsureWds(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
+func newCmdEnsureWds() *cobra.Command {
 	// Make wds command
 	cmdWds := &cobra.Command{
 		Use:   "wds <WDS_NAME>",
@@ -56,7 +55,7 @@ func newCmdEnsureWds(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 			// want the help to be displayed when the error is due to an
 			// invalid command.
 			cmd.SilenceUsage = true
-			err := ensureWds(cmd, cliOpts, args)
+			err := ensureWds(cmd, args)
 			return err
 		},
 	}
@@ -77,7 +76,7 @@ func newCmdEnsureWds(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 // - If --with-kube is true, ensure a list of APIBindings exist with export path
 //   "root:compute" (create any that are missing). If --with-kube is false, make
 //   sure none of these exist (delete as needed).
-func ensureWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string) error {
+func ensureWds(cmdWds *cobra.Command, args []string) error {
 	wdsName := args[0] // name of WDS
 	ctx := context.Background()
 	logger := klog.FromContext(ctx)
@@ -161,17 +160,17 @@ func verifyOrCreateWDS(client *kcpclientset.Clientset, ctx context.Context, logg
 	// Check if WDS workspace exists
 	_, err := client.TenancyV1alpha1().Workspaces().Get(ctx, wdsName, metav1.GetOptions{})
 	if err == nil {
-		logger.Info(fmt.Sprintf("Found WDS workspace %s", wdsName))
+		logger.Info(fmt.Sprintf("Found WDS workspace root:%s", wdsName))
 		return err
 	}
 	if ! apierrors.IsNotFound(err) {
 		// Some error other than a non-existant workspace
-		logger.Error(err, fmt.Sprintf("Error checking for WDS %s", wdsName))
+		logger.Error(err, fmt.Sprintf("Error checking for root:WDS %s", wdsName))
 		return err
 	}
 
 	// WDS workspace does not exist, create it
-	logger.Info(fmt.Sprintf("No WDS workspace %s, creating it", wdsName))
+	logger.Info(fmt.Sprintf("No WDS workspace root:%s, creating it", wdsName))
 
 	workspace := &tenancyv1alpha1.Workspace {
 		TypeMeta: metav1.TypeMeta {
@@ -184,12 +183,12 @@ func verifyOrCreateWDS(client *kcpclientset.Clientset, ctx context.Context, logg
 	}
 	_, err = client.TenancyV1alpha1().Workspaces().Create(ctx, workspace, metav1.CreateOptions{})
 	if err != nil {
-		logger.Info(fmt.Sprintf("Failed to create WDS workspace %s", wdsName))
+		logger.Info(fmt.Sprintf("Failed to create WDS workspace root:%s", wdsName))
 		return err
 	}
 
 	// Wait for workspace to become ready
-	wait.Poll(time.Millisecond*100, time.Second*5, func() (bool, error) {
+	wait.Poll(time.Millisecond*100, time.Second*timeoutTime, func() (bool, error) {
 		// See if we can get new workspace
 		if _, err := client.TenancyV1alpha1().Workspaces().Get(ctx, wdsName, metav1.GetOptions{}); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -200,10 +199,19 @@ func verifyOrCreateWDS(client *kcpclientset.Clientset, ctx context.Context, logg
 			return false, err
 		}
 		// We got the workspace, we're good to go
+		logger.Info(fmt.Sprintf("Workspace root:%s ready", wdsName))
+		// NOTE sometimes the next step of creating an APIBinding still fails,
+		// so add more delay. If this is still not long enough, an error like
+		// the following will be seen when creating an APIBinding:
+		//
+		// apibindings.apis.kcp.io "bind-flowcontrol.apiserver.k8s.io" is
+		// forbidden: User "kcp-admin" cannot get resource "apibindings" in API
+		// group "apis.kcp.io" at the cluster scope: access denied
+		time.Sleep(time.Millisecond*1000)
 		return true, nil
 	})
 	if err != nil {
-		logger.Error(err, fmt.Sprintf("Problem waiting for WDS workspace %s", wdsName))
+		logger.Error(err, fmt.Sprintf("Problem waiting for WDS workspace root:%s", wdsName))
 		return err
 	}
 

@@ -27,7 +27,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/klog/v2"
 
 	clientopts "github.com/kubestellar/kubestellar/pkg/client-options"
@@ -37,7 +36,7 @@ import (
 var imw string // IMW workspace path
 
 // Create the Cobra sub-command for 'kubectl kubestellar remove location'
-func newCmdRemoveLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
+func newCmdRemoveLocation() *cobra.Command {
 	// Make location command
 	cmdLocation := &cobra.Command{
 		Use:     "location --imw <IMW_NAME> <LOCATION_NAME>",
@@ -50,7 +49,7 @@ func newCmdRemoveLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command
 			// want the help to be displayed when the error is due to an
 			// invalid command.
 			cmd.SilenceUsage = true
-			err := removeLocation(cmd, cliOpts, args)
+			err := removeLocation(cmd, args)
 			return err
 		},
 	}
@@ -64,7 +63,7 @@ func newCmdRemoveLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command
 // Delete SyncTarget and Location from IMW.
 // The IMW name is provided by the --imw flag (stored in the "imw" string
 // variable), and the location name is a command line argument.
-func removeLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string) error {
+func removeLocation(cmdLocation *cobra.Command, args []string) error {
 	locationName := args[0]
 	ctx := context.Background()
 	logger := klog.FromContext(ctx)
