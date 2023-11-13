@@ -13,8 +13,8 @@ limitations under the License.
 
 // Sub-command for ensuring the existence and configuration a location in a WEC.
 // The IMW is provided by the required --imw flag.
-// The location name is provided as a required command line argument.
-// Labels in key=value pairs are provided as command line arguments, for which
+// The location name is provided as a required command-line argument.
+// Labels in key=value pairs are provided as command-line arguments, for which
 // we will ensure that these exist as labels in the Location and SyncTarget.
 
 package ensure
@@ -75,14 +75,14 @@ func newCmdEnsureLocation(cliOpts *genericclioptions.ConfigFlags) *cobra.Command
 // variable), and the location name is a command line argument.
 // Labels to check are provided as additional arguments in key=value pairs.
 // In this function we will:
-// - work in the provided IMW workspace
-// - check if APIBinding "edge.kubestellar.io" exists in IMW, create if not
-// - check for SyncTarget of provided name in IMW, create if not
-// - check that SyncTarget has an "id" label matching the Location name
-// - ensure that SyncTarget has the labels provided by the user
-// - check for Location of provided name in IMW, create if not
-// - ensure that Location has the labels provided by the user
-// - if Location "default" exists, delete it
+// - Work in the provided IMW workspace
+// - Check if APIBinding "edge.kubestellar.io" exists in IMW, create if not
+// - Check for SyncTarget of provided name in IMW, create if not
+// - Check that SyncTarget has an "id" label matching the Location name
+// - Ensure that SyncTarget has the labels provided by the user
+// - Check for Location of provided name in IMW, create if not
+// - Ensure that Location has the labels provided by the user
+// - If Location "default" exists, delete it
 func ensureLocation(cmdLocation *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string) error {
 	locationName := args[0]
 	labels := args[1:]

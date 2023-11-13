@@ -11,7 +11,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Sub-command for ensuring the existence and configuration of a WDS.
+// Sub-command for ensuring the existence of a workload description space (WDS),
+// along with requisite APIBindings.
+// The WDS name is given as a required command-line argument.
+// --with-kube is a required flag which determines if Kube APIBindings are needed.
 
 package ensure
 
@@ -64,7 +67,16 @@ func newCmdEnsureWds(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 	return cmdWds
 }
 
-// Perform validation of workload management workspace
+// Perform validation of workload description space (WDS). The user will provide
+// the WDS name as a command-line argument, along with a boolean for --with-kube.
+// This function will:
+// - At the root KCP level, check for a WDS workspace having the user provided
+//   name, create if needed
+// - At the root KCP level, check for an APIBinding "bind-espw" with export path
+//   "root:espw" and export name "edge.kubestellar.io"
+// - If --with-kube is true, ensure a list of APIBindings exist with export path
+//   "root:compute" (create any that are missing). If --with-kube is false, make
+//   sure none of these exist (delete as needed).
 func ensureWds(cmdWds *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string) error {
 	wdsName := args[0] // name of WDS
 	ctx := context.Background()
