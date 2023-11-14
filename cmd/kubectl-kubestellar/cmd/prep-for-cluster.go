@@ -12,3 +12,5 @@ limitations under the License.
 */
 
 package cmd
+
+// Placeholder for "kubectl kubestellar prep-for-cluster"

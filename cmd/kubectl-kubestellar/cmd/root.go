@@ -63,7 +63,7 @@ This command provides the kubestellar sub-command for kubectl.`,
 		} else {
 			// NOTE this does not run if "Args:  cobra.ExactArgs(1)" is set,
 			// although the error message printed is acceptable.
-			return errors.New(fmt.Sprintf("Missing kubestellar sub-command\n"))
+			return errors.New("Missing kubestellar sub-command\n")
 		}
 	},
 }
@@ -74,7 +74,7 @@ var completionCmd = &cobra.Command{
 	Use:	"completion",
 	Short:	"Generate the autocompletion script for the specified shell",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return errors.New(fmt.Sprintf("Not implemented\n"))
+		return errors.New("Not implemented\n")
 	},
 }
 

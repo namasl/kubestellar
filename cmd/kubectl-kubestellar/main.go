@@ -11,7 +11,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// This is the entrypoint for KubeStellar sub-commands for kubectl
+// This is the entrypoint for KubeStellar sub-commands for kubectl.
+// This should be compiled as an executable named "kubectl-kubestellar",
+// allowing it to be used as a plugin to kubectl. This entry-level command
+// is executed as "kubectl kubestellar", with sub-commands following.
 
 package main
 

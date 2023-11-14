@@ -11,10 +11,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// This is the sub-command for getting the KubeStellar kubectl configuration.
-// "get-external-kubeconfig" is used when running externally to the cluster hosting Kubestellar.
-// "get-internal-kubeconfig" is used when running inside the same cluster as Kubestellar.
-// --output (-o) is a required flag for providing an output filename for the config file.
+// These are sub-commands for getting the KubeStellar kubectl configuration.
+//
+// "kubectl kubestellar get-external-kubeconfig" is used when running externally
+// to the cluster hosting Kubestellar.
+//
+// "kubectl kubestellar get-internal-kubeconfig" is used when running inside the
+// same cluster as Kubestellar.
+//
+// In both cases--output (-o) is a required flag for providing an output
+// filename for the config file.
 
 package cmd
 
