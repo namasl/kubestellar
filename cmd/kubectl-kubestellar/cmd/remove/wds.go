@@ -23,13 +23,12 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 
 	kcpclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
 
 	clientopts "github.com/kubestellar/kubestellar/pkg/client-options"
+	plugin "github.com/kubestellar/kubestellar/pkg/cliplugins/kubestellar/remove"
 )
 
 // Create the Cobra sub-command for 'kubectl kubestellar remove wds'
@@ -85,26 +84,16 @@ func removeWds(cmdWds *cobra.Command, args []string) error {
 	}
 
 	// Delete WDS KCP workspace
-	err = deleteWorkspace(client, ctx, logger, wdsName)
+	removed, err := plugin.DeleteWorkspace(client, ctx, wdsName)
 	if err != nil {
+		logger.Error(err, fmt.Sprintf("Problem removing workspace root:%s", wdsName))
 		return err
 	}
-
-	return nil
-}
-
-// Delete a KCP workspace, don't return an error if it doesn't exist
-func deleteWorkspace(client *kcpclientset.Clientset, ctx context.Context, logger klog.Logger, wsName string) error {
-	// Delete the workspace
-	err := client.TenancyV1alpha1().Workspaces().Delete(ctx, wsName, metav1.DeleteOptions{})
-	if err == nil {
-		logger.Info(fmt.Sprintf("Removed workspace root:%s", wsName))
-		return err
-	} else if ! apierrors.IsNotFound(err) {
-		// Some error other than a non-existant workspace
-		logger.Info(fmt.Sprintf("Problem removing workspace root:%s", wsName))
-		return err
+	if removed {
+		logger.Info(fmt.Sprintf("Removed workspace root:%s", wdsName))
+	} else {
+		logger.Info(fmt.Sprintf("Verified no workspace root:%s", wdsName))
 	}
-	logger.Info(fmt.Sprintf("Verified no workspace root:%s", wsName))
+
 	return nil
 }

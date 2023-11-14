@@ -26,23 +26,18 @@ package cmd
 
 import (
     "context"
-	"errors"
     "fmt"
 	"flag"
-	"io"
 	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/klog/v2"
+
+	plugin "github.com/kubestellar/kubestellar/pkg/cliplugins/kubestellar/get-kubeconfig"
 )
 
 const ksContext = "ks-core" // Context for interacting with KubeStellar componnet pods
@@ -152,13 +147,13 @@ func getKubeconfig(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 	}
 
 	// Get name of KubeStellar server pod
-	serverPodName, err := getServerPodName(client, ctx, logger)
+	serverPodName, err := plugin.GetServerPodName(client, ctx, logger, ksNamespace, ksSelector)
 	if err != nil {
 		return err
 	}
 
 	// Check if server pod is ready
-	err = ksPodIsReady(client, config, ksNamespace, serverPodName, "init")
+	err = plugin.KsPodIsReady(client, config, ksNamespace, serverPodName, "init")
 	if err != nil {
 		logger.Error(err, fmt.Sprintf("KubeStellar init container in pod %s is not ready", serverPodName))
 		return err
@@ -166,7 +161,7 @@ func getKubeconfig(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 	logger.Info(fmt.Sprintf("KubeStellar init container in pod %s is ready", serverPodName))
 
 	// Get KubeSteallar Kubeconfig
-	ksConfig, err := getKSKubeconfig(client, ctx, isInternal)
+	ksConfig, err := plugin.GetKSKubeconfig(client, ctx, ksNamespace, isInternal)
 	if err != nil {
 		logger.Error(err, "Problem obtaining kubeconfig")
 		return err
@@ -182,114 +177,4 @@ func getKubeconfig(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 	logger.Info(fmt.Sprintf("Wrote kubeconfig to file %s", fname))
 
     return nil
-}
-
-// Get name of pod running KubeStellar server
-func getServerPodName(client *kubernetes.Clientset, ctx context.Context, logger klog.Logger) (string, error) {
-	// Get list of pods matching selector in given namespace
-	podNames, err := getPodNames(client, ctx, ksNamespace, ksSelector)
-	if err != nil {
-		logger.Error(err, "Failed create client-go instance")
-		return "", err
-	}
-
-	// Make sure we get one matching pod
-	if len(podNames) == 0 {
-		err = errors.New("No server pods")
-		logger.Error(err, fmt.Sprintf("Could not find a server pod in namespace %s with selector %s", ksNamespace, ksSelector))
-		return "", err
-	} else if len(podNames) > 1 {
-		err = errors.New("More than one server pod")
-		logger.Error(err, "Found %d server pods in namespace %s with selector %s", len(podNames), ksNamespace, ksSelector)
-		return "", err
-	}
-
-	serverPodName := podNames[0]
-	logger.Info(fmt.Sprintf("Found KubeStellar server pod %s", serverPodName))
-	// Return pod name
-	return serverPodName, nil
-}
-
-// Get a list (slice) of pod names, within a given namespace matching selector
-func getPodNames(client *kubernetes.Clientset, ctx context.Context, namespace, selector string) ([]string, error) {
-	// slide for holding pod names
-	var podNames []string
-	// Get list of pods matching selector in given namespace
-	podList, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: selector})
-	if err != nil {
-		return podNames, err
-	}
-
-	// Go through each pod, pull out its name, and append to podNames
-	for _, podItems := range podList.Items {
-		podNames = append(podNames, podItems.Name)
-	}
-
-	// Return pod names
-	return podNames, nil
-}
-
-// Check if a KubeStellar container inside a pod is ready (nil error indicates ready)
-func ksPodIsReady(client *kubernetes.Clientset, config *rest.Config, namespace, podName, container string) error {
-	// Check if '/home/kubestellar/ready' exists in container
-	err := executeCommandInPod(client, config, namespace, podName, container, []string{"ls", "/home/kubestellar/ready"}, os.Stdin, os.Stdout, os.Stderr)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Execute a command within a specified container inside a pod
-func executeCommandInPod(client *kubernetes.Clientset, config *rest.Config, namespace, podName, container string, command []string,
-	stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-	// Get REST request for executing in pod
-	req := client.CoreV1().RESTClient().Post().Resource("pods").Name(podName).Namespace(namespace).SubResource("exec")
-
-	// Query options to add to exec call
-	option := &corev1.PodExecOptions{
-
-		Stdin:     true,
-		Stdout:    true,
-		Stderr:    true,
-		TTY:       true,
-		Container: container,
-		Command:   command,
-	}
-	if stdin == nil {
-		option.Stdin = false
-	}
-
-	// Add query options to req
-	req.VersionedParams(option, scheme.ParameterCodec)
-
-	// Set up bi-directional stream
-	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
-	if err != nil {
-		return err
-	}
-	// POST the request
-	err = exec.Stream(remotecommand.StreamOptions{Stdin: stdin, Stdout: stdout, Stderr: stderr})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Get KubeStellar kubeconfig
-func getKSKubeconfig(client *kubernetes.Clientset, ctx context.Context, isInternal bool) ([]byte, error) {
-
-	// Get KubeStellar secrets
-	secret, err := client.CoreV1().Secrets(ksNamespace).Get(ctx, "kubestellar", metav1.GetOptions{})
-	if err != nil {
-		return []byte{}, err
-	}
-
-	// Return internal or external kubeconfig
-	if isInternal {
-		internalKubeconfig := secret.Data["cluster.kubeconfig"]
-		return internalKubeconfig, nil
-	}
-	externalKubeconfig := secret.Data["external.kubeconfig"]
-	return externalKubeconfig, nil
 }

@@ -25,12 +25,11 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 
 	clientopts "github.com/kubestellar/kubestellar/pkg/client-options"
 	clientset "github.com/kubestellar/kubestellar/pkg/client/clientset/versioned"
+	plugin "github.com/kubestellar/kubestellar/pkg/cliplugins/kubestellar/remove"
 )
 
 var imw string // IMW workspace path
@@ -97,48 +96,28 @@ func removeLocation(cmdLocation *cobra.Command, args []string) error {
 	}
 
 	// Delete the SyncTarget object
-	err = deleteSyncTarget(client, ctx, logger, locationName)
+	removed, err := plugin.DeleteSyncTarget(client, ctx, locationName)
 	if err != nil {
+		logger.Error(err, fmt.Sprintf("Problem removing SyncTarget %s from workspace root:%s", locationName, imw))
 		return err
+	}
+	if removed {
+		logger.Info(fmt.Sprintf("Removed SyncTarget %s from workspace root:%s", locationName, imw))
+	} else {
+		logger.Info(fmt.Sprintf("Verified no SyncTarget %s in workspace root:%s", locationName, imw))
 	}
 
 	// Delete the Location object
-	err = deleteLocation(client, ctx, logger, locationName)
+	removed, err = plugin.DeleteLocation(client, ctx, locationName)
 	if err != nil {
+		logger.Error(err, fmt.Sprintf("Problem removing Location %s from workspace root:%s", locationName, imw))
 		return err
 	}
-
-	return nil
-}
-
-// Delete a SyncTarget, don't return an error if it doesn't exist
-func deleteSyncTarget(client *clientset.Clientset, ctx context.Context, logger klog.Logger, syncTargetName string) error {
-	// Delete the workspace
-	err := client.EdgeV2alpha1().SyncTargets().Delete(ctx, syncTargetName, metav1.DeleteOptions{})
-	if err == nil {
-		logger.Info(fmt.Sprintf("Removed SyncTarget %s from workspace root:%s", syncTargetName, imw))
-		return err
-	} else if ! apierrors.IsNotFound(err) {
-		// Some error other than a non-existant workspace
-		logger.Info(fmt.Sprintf("Problem removing SyncTarget %s from workspace root:%s", syncTargetName, imw))
-		return err
-	}
-	logger.Info(fmt.Sprintf("Verified no SyncTarget %s in workspace root:%s", syncTargetName, imw))
-	return nil
-}
-
-// Delete a Location, don't return an error if it doesn't exist
-func deleteLocation(client *clientset.Clientset, ctx context.Context, logger klog.Logger, locationName string) error {
-	// Delete the workspace
-	err := client.EdgeV2alpha1().Locations().Delete(ctx, locationName, metav1.DeleteOptions{})
-	if err == nil {
+	if removed {
 		logger.Info(fmt.Sprintf("Removed Location %s from workspace root:%s", locationName, imw))
-		return err
-	} else if ! apierrors.IsNotFound(err) {
-		// Some error other than a non-existant workspace
-		logger.Info(fmt.Sprintf("Problem removing Location %s from workspace root:%s", locationName, imw))
-		return err
+	} else {
+		logger.Info(fmt.Sprintf("Verified no Location %s in workspace root:%s", locationName, imw))
 	}
-	logger.Info(fmt.Sprintf("Verified no Location %s in workspace root:%s", locationName, imw))
+
 	return nil
 }
