@@ -157,6 +157,9 @@ func getKubeconfig(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 	}
 	logger.Error(err, fmt.Sprintf("KubeStellar init container in pod %s is ready", serverPodName))
 
+
+
+
 	// Get KubeStellar secrets
 	secret, err := client.CoreV1().Secrets(ksNamespace).Get(ctx, "kubestellar", metav1.GetOptions{})
 
