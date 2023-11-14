@@ -149,13 +149,13 @@ func getKubeconfig(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 		return err
 	}
 
-	// Check if server pod is ready to accept commands
+	// Check if server pod is ready
 	err = ksPodIsReady(client, config, ksNamespace, serverPodName, "init")
 	if err != nil {
-		logger.Error(err, fmt.Sprintf("Pod %s container init is not ready to accept commands", serverPodName))
+		logger.Error(err, fmt.Sprintf("KubeStellar init container in pod %s is not ready", serverPodName))
 		return err
 	}
-	logger.Error(err, fmt.Sprintf("Pod %s cointainer init is ready", serverPodName))
+	logger.Error(err, fmt.Sprintf("KubeStellar init container in pod %s is ready", serverPodName))
 
 
     return nil
@@ -206,7 +206,7 @@ func getPodNames(client *kubernetes.Clientset, ctx context.Context, namespace, s
 	return podNames, nil
 }
 
-// Check if a container inside a pod is ready (nil error indicates ready)
+// Check if a KubeStellar container inside a pod is ready (nil error indicates ready)
 func ksPodIsReady(client *kubernetes.Clientset, config *rest.Config, namespace, podName, container string) error {
 	err := executeCommandInPod(client, config, namespace, podName, container, []string{"ls", "/home/kubestellar/ready"}, os.Stdin, os.Stdout, os.Stderr)
 	if err != nil {
