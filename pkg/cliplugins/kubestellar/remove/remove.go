@@ -24,23 +24,6 @@ import (
 	clientset "github.com/kubestellar/kubestellar/pkg/client/clientset/versioned"
 )
 
-// Delete a SyncTarget.
-// Don't return an error if it doesn't exist, instead return a boolean on
-// whether a deletion had to take place.
-func DeleteSyncTarget(client *clientset.Clientset, ctx context.Context, syncTargetName string) (bool, error) {
-	// Delete the SyncTarget
-	err := client.EdgeV2alpha1().SyncTargets().Delete(ctx, syncTargetName, metav1.DeleteOptions{})
-	if err == nil {
-		// Removed SyncTarget
-		return true, nil
-	} else if ! apierrors.IsNotFound(err) {
-		// Some error other than a non-existant SyncTarget
-		return false, err
-	}
-	// No SyncTarget to remove
-	return false, nil
-}
-
 // Delete a Location.
 // Don't return an error if it doesn't exist, instead return a boolean on
 // whether a deletion had to take place.
@@ -55,6 +38,23 @@ func DeleteLocation(client *clientset.Clientset, ctx context.Context, locationNa
 		return false, err
 	}
 	// No Location to remove
+	return false, nil
+}
+
+// Delete a SyncTarget.
+// Don't return an error if it doesn't exist, instead return a boolean on
+// whether a deletion had to take place.
+func DeleteSyncTarget(client *clientset.Clientset, ctx context.Context, syncTargetName string) (bool, error) {
+	// Delete the SyncTarget
+	err := client.EdgeV2alpha1().SyncTargets().Delete(ctx, syncTargetName, metav1.DeleteOptions{})
+	if err == nil {
+		// Removed SyncTarget
+		return true, nil
+	} else if ! apierrors.IsNotFound(err) {
+		// Some error other than a non-existant SyncTarget
+		return false, err
+	}
+	// No SyncTarget to remove
 	return false, nil
 }
 
