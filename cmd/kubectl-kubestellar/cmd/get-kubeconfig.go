@@ -155,20 +155,23 @@ func getKubeconfig(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 		logger.Error(err, fmt.Sprintf("KubeStellar init container in pod %s is not ready", serverPodName))
 		return err
 	}
-	logger.Error(err, fmt.Sprintf("KubeStellar init container in pod %s is ready", serverPodName))
+	logger.Info(fmt.Sprintf("KubeStellar init container in pod %s is ready", serverPodName))
 
-
-
-
-	// Get KubeStellar secrets
-	secret, err := client.CoreV1().Secrets(ksNamespace).Get(ctx, "kubestellar", metav1.GetOptions{})
-
-	externalKubeconfig := string(secret.Data["external.kubeconfig"])
-	internalKubeconfig := string(secret.Data["cluster.kubeconfig"])
-	fmt.Println(externalKubeconfig)
-	fmt.Println(internalKubeconfig)
+	// Get KubeSteallar Kubeconfig
+	ksConfig, err := getKSKubeconfig(client, ctx, isInternal)
+	if err != nil {
+		logger.Error(err, "Problem obtaining kubeconfig")
+		return err
+	}
+	logger.V(1).Info(fmt.Sprintf("kubeconfig: %s", string(ksConfig)))
 
 	// Write to file
+    err = os.WriteFile(fname, ksConfig, 0644)
+	if err != nil {
+		logger.Error(err, "Problem writing kubeconfig to output file %s", fname)
+		return err
+	}
+	logger.Info(fmt.Sprintf("Wrote kubeconfig to file %s", fname))
 
     return nil
 }
@@ -263,4 +266,22 @@ func executeCommandInPod(client *kubernetes.Clientset, config *rest.Config, name
 	}
 
 	return nil
+}
+
+// Get KubeStellar kubeconfig
+func getKSKubeconfig(client *kubernetes.Clientset, ctx context.Context, isInternal bool) ([]byte, error) {
+
+	// Get KubeStellar secrets
+	secret, err := client.CoreV1().Secrets(ksNamespace).Get(ctx, "kubestellar", metav1.GetOptions{})
+	if err != nil {
+		return []byte{}, err
+	}
+
+	// Return internal or external kubeconfig
+	if isInternal {
+		internalKubeconfig := secret.Data["cluster.kubeconfig"]
+		return internalKubeconfig, nil
+	}
+	externalKubeconfig := secret.Data["external.kubeconfig"]
+	return externalKubeconfig, nil
 }
