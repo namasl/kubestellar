@@ -23,13 +23,18 @@ import (
 	"errors"
     "fmt"
 	"flag"
+	"io"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/klog/v2"
 )
 
@@ -136,12 +141,10 @@ func getKubeconfig(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 
 	// Get name of KubeStellar server pod
 	serverPodName, err := getServerPodName(client, ctx, logger)
-
-	logger.Info(fmt.Sprintf("Found KubeStellar server pod %s", serverPodName))
 	if err != nil {
 		return err
 	}
-
+	logger.Info(fmt.Sprintf("Found KubeStellar server pod %s", serverPodName))
 
 
     return nil
@@ -169,4 +172,33 @@ func getServerPodName(client *kubernetes.Clientset, ctx context.Context, logger 
 
 	// Return pod name
 	return podList.Items[0].Name, nil
+}
+
+func executeCommandInPod(client *kubernetes.Clientset, config *rest.Config, podName string, command []string,
+	stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	req := client.CoreV1().RESTClient().Post().Resource("pods").Name(podName).Namespace(ksNamespace).SubResource("exec")
+
+	option := &corev1.PodExecOptions{
+		Command: command,
+		Stdin:   true,
+		Stdout:  true,
+		Stderr:  true,
+		TTY:     true,
+	}
+	if stdin == nil {
+		option.Stdin = false
+	}
+
+	req.VersionedParams(option, scheme.ParameterCodec)
+	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
+	if err != nil {
+		return err
+	}
+
+	err = exec.Stream(remotecommand.StreamOptions{Stdin:  stdin, Stdout: stdout, Stderr: stderr})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
