@@ -50,7 +50,7 @@ var fname string // Filename/path for output configuration file (--output flag)
 func newGetExternalKubeconfig(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 	// Make wds command
 	cmdGetExternalKubeconfig := &cobra.Command{
-		Use:     "get-external-kubeconfig",
+		Use:     "get-external-kubeconfig --output <FILENAME>",
 		Aliases: []string{"gek"},
 		Short:   "Get KubeStellar kubectl configuration when external to host cluster",
 		Args:    cobra.ExactArgs(0),
@@ -75,7 +75,7 @@ func newGetExternalKubeconfig(cliOpts *genericclioptions.ConfigFlags) *cobra.Com
 func newGetInternalKubeconfig(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 	// Make wds command
 	cmdGetInternalKubeconfig := &cobra.Command{
-		Use:     "get-internal-kubeconfig",
+		Use:     "get-internal-kubeconfig --output <FILENAME>",
 		Aliases: []string{"gik"},
 		Short:   "Get KubeStellar kubectl configuration from inside same cluster",
 		Args:    cobra.ExactArgs(0),
@@ -147,10 +147,12 @@ func getKubeconfig(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 	}
 
 	// Get name of KubeStellar server pod
-	serverPodName, err := plugin.GetServerPodName(client, ctx, logger, ksNamespace, ksSelector)
+	serverPodName, err := plugin.GetServerPodName(client, ctx, ksNamespace, ksSelector)
 	if err != nil {
+		logger.Error(err, fmt.Sprintf("Problem finding server pod in namespace %s with selector %s", ksNamespace, ksSelector))
 		return err
 	}
+	logger.Info(fmt.Sprintf("Found KubeStellar server pod %s", serverPodName))
 
 	// Check if server pod is ready
 	err = plugin.KsPodIsReady(client, config, ksNamespace, serverPodName, "init")

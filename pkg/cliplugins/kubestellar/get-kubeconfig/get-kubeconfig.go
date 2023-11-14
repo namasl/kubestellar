@@ -15,7 +15,6 @@ package plugin
 
 import (
     "context"
-	"errors"
     "fmt"
 	"io"
 	"os"
@@ -27,32 +26,26 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
-	"k8s.io/klog/v2"
 )
 
 // Get name of pod running KubeStellar server
-func GetServerPodName(client *kubernetes.Clientset, ctx context.Context, logger klog.Logger, namespace, selector string) (string, error) {
+func GetServerPodName(client *kubernetes.Clientset, ctx context.Context, namespace, selector string) (string, error) {
 	// Get list of pods matching selector in given namespace
 	podNames, err := GetPodNames(client, ctx, namespace, selector)
 	if err != nil {
-		logger.Error(err, "Failed create client-go instance")
 		return "", err
 	}
 
 	// Make sure we get one matching pod
 	if len(podNames) == 0 {
-		err = errors.New("No server pods")
-		logger.Error(err, fmt.Sprintf("Could not find a server pod in namespace %s with selector %s", namespace, selector))
+		err = fmt.Errorf("No pod in namespace %s with selector %s", namespace, selector)
 		return "", err
 	} else if len(podNames) > 1 {
-		err = errors.New("More than one server pod")
-		logger.Error(err, "Found %d server pods in namespace %s with selector %s", len(podNames), namespace, selector)
+		err = fmt.Errorf("More than one pod (%d) in namespace %s with selector %s", len(podNames), namespace, selector)
 		return "", err
 	}
-
-	serverPodName := podNames[0]
-	logger.Info(fmt.Sprintf("Found KubeStellar server pod %s", serverPodName))
 	// Return pod name
+	serverPodName := podNames[0]
 	return serverPodName, nil
 }
 
