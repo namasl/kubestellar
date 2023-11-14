@@ -117,6 +117,8 @@ func init() {
 	rootCmd.AddCommand(newGetInternalKubeconfig(cliOpts))
 }
 
+// Get KubeStellar kubeconfig, and write to output file (filename given by fname
+// variable, tied to --output flag).
 func getKubeconfig(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string, isInternal bool) error {
 	ctx := context.Background()
 	logger := klog.FromContext(ctx)
