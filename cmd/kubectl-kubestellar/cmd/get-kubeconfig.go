@@ -159,12 +159,11 @@ func getKubeconfig(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 
 	// Get KubeStellar secrets
 	secret, err := client.CoreV1().Secrets(ksNamespace).Get(ctx, "kubestellar", metav1.GetOptions{})
-	fmt.Println(secret)
 
-	// external: .data.external\.kubeconfig
-	// internal: .data.cluster\.kubeconfig
-
-	// Base64 decode
+	externalKubeconfig := string(secret.Data["external.kubeconfig"])
+	internalKubeconfig := string(secret.Data["cluster.kubeconfig"])
+	fmt.Println(externalKubeconfig)
+	fmt.Println(internalKubeconfig)
 
 	// Write to file
 

@@ -14,7 +14,7 @@ limitations under the License.
 // Sub-command for ensuring the existence of a workload description space (WDS),
 // along with requisite APIBindings.
 // The WDS name is given as a required command-line argument.
-// --with-kube is a required flag which determines if Kube APIBindings are needed.
+// --with-kube is a required flag which determines if root:compute APIBindings are needed.
 
 package ensure
 
@@ -61,7 +61,7 @@ func newCmdEnsureWds() *cobra.Command {
 	}
 
 	// Add flag for 
-	cmdWds.Flags().BoolVar(&withKube, "with-kube", true, "Include API binding")
+	cmdWds.Flags().BoolVar(&withKube, "with-kube", true, "Include root:compute API bindings")
 	cmdWds.MarkFlagRequired("with-kube")
 	return cmdWds
 }
