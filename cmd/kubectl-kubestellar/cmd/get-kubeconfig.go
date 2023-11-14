@@ -157,6 +157,16 @@ func getKubeconfig(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 	}
 	logger.Error(err, fmt.Sprintf("KubeStellar init container in pod %s is ready", serverPodName))
 
+	// Get KubeStellar secrets
+	secret, err := client.CoreV1().Secrets(ksNamespace).Get(ctx, "kubestellar", metav1.GetOptions{})
+	fmt.Println(secret)
+
+	// external: .data.external\.kubeconfig
+	// internal: .data.cluster\.kubeconfig
+
+	// Base64 decode
+
+	// Write to file
 
     return nil
 }
@@ -208,6 +218,7 @@ func getPodNames(client *kubernetes.Clientset, ctx context.Context, namespace, s
 
 // Check if a KubeStellar container inside a pod is ready (nil error indicates ready)
 func ksPodIsReady(client *kubernetes.Clientset, config *rest.Config, namespace, podName, container string) error {
+	// Check if '/home/kubestellar/ready' exists in container
 	err := executeCommandInPod(client, config, namespace, podName, container, []string{"ls", "/home/kubestellar/ready"}, os.Stdin, os.Stdout, os.Stderr)
 	if err != nil {
 		return err
