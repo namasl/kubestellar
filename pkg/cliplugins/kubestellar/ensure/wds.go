@@ -30,12 +30,11 @@ import (
 )
 
 // Make sure user provided WDS name is valid
-func CheckWdsName(wdsName string, logger klog.Logger) error {
+func CheckWdsName(wdsName string) error {
 	// ensure characters are valid
 	matched, _ := regexp.MatchString(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`, wdsName)
 	if !matched {
 		err := errors.New("WDS name must match regex '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'")
-		logger.Error(err, fmt.Sprintf("Invalid WDS name %s", wdsName))
 		return err
 	}
 	return nil
@@ -138,27 +137,34 @@ func VerifyKubeAPIBindings(client *kcpclientset.Clientset, ctx context.Context, 
 			}
 		} else {
 			// Remove these bindings if they exist
-			err := DeleteAPIBinding(client, ctx, logger, bindName)
+			removed, err := DeleteAPIBinding(client, ctx, bindName)
 			if err != nil {
+				logger.Error(err, fmt.Sprintf("Problem removing APIBinding %s", bindName))
 				return err
+			}
+			if removed {
+				logger.Info(fmt.Sprintf("Removed APIBinding %s", bindName))
+			} else {
+				logger.Info(fmt.Sprintf("Verified no APIBinding %s", bindName))
 			}
 		}
 	}
 	return nil
 }
 
-// Delete an API binding, don't return an error if it doesn't exist
-func DeleteAPIBinding(client *kcpclientset.Clientset, ctx context.Context, logger klog.Logger, bindName string) error {
+// Delete an API binding.
+// Don't return an error if it doesn't exist, instead return a boolean on
+// whether a deletion had to take place.
+func DeleteAPIBinding(client *kcpclientset.Clientset, ctx context.Context, bindName string) (bool, error) {
 	// Delete the APIBinding
 	err := client.ApisV1alpha1().APIBindings().Delete(ctx, bindName, metav1.DeleteOptions{})
 	if err == nil {
-		logger.Info(fmt.Sprintf("Removed APIBinding %s", bindName))
-		return err
+		// Removed the APIBinding
+		return true, nil
 	} else if ! apierrors.IsNotFound(err) {
 		// Some error other than a non-existant APIBinding
-		logger.Error(err, fmt.Sprintf("Problem removing APIBinding %s", bindName))
-		return err
+		return false, err
 	}
-	logger.Info(fmt.Sprintf("Verified no APIBinding %s", bindName))
-	return nil
+	// No APIBinding to remove
+	return false, nil
 }

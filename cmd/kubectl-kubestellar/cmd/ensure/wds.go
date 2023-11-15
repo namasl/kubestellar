@@ -81,8 +81,9 @@ func ensureWds(cmdWds *cobra.Command, args []string) error {
 	})
 
 	// Make sure user provided WDS name is valid
-	err := plugin.CheckLocationName(wdsName, logger)
+	err := plugin.CheckWdsName(wdsName)
 	if err != nil {
+		logger.Error(err, fmt.Sprintf("Invalid WDS name %s", wdsName))
 		return err
 	}
 
@@ -106,6 +107,8 @@ func ensureWds(cmdWds *cobra.Command, args []string) error {
 	}
 
 	// Check for WDS workspace, create if it does not exist
+	// This function performs a lot of tasks, so pass it the logger and let it
+	// do the talking.
 	err = plugin.VerifyOrCreateWDS(client, ctx, logger, wdsName)
 	if err != nil {
 		return err
@@ -123,12 +126,16 @@ func ensureWds(cmdWds *cobra.Command, args []string) error {
 	}
 
 	// Check for APIBinding bind-espw, create if it does not exist
+	// This function performs a lot of tasks, so pass it the logger and let it
+	// do the talking.
 	err = plugin.VerifyOrCreateAPIBinding(client, ctx, logger, "bind-espw", "edge.kubestellar.io", "root:espw")
 	if err != nil {
 		return err
 	}
 
 	// Check for Kube APIBindings, add/remove as needed depending on withKube
+	// This function performs a lot of tasks, so pass it the logger and let it
+	// do the talking.
 	err = plugin.VerifyKubeAPIBindings(client, ctx, logger, withKube)
 	if err != nil {
 		return err
