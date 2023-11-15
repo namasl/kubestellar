@@ -90,14 +90,16 @@ func ensureLocation(cmdLocation *cobra.Command, args []string) error {
 	})
 
 	// Make sure user provided location name is valid
-	err := plugin.CheckLocationName(locationName, logger)
+	err := plugin.CheckLocationName(locationName)
 	if err != nil {
+		logger.Error(err, fmt.Sprintf("Problem with location name %s", locationName))
 		return err
 	}
 
 	// Make sure user provided labels are valid
-	err = plugin.CheckLabelArgs(labels, logger)
+	err = plugin.CheckLabelArgs(labels)
 	if err != nil {
+		logger.Error(err, fmt.Sprintf("Problem with label arguments %s", labels))
 		return err
 	}
 

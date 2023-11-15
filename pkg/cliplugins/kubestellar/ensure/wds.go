@@ -69,7 +69,7 @@ func VerifyOrCreateWDS(client *kcpclientset.Clientset, ctx context.Context, logg
 	}
 	_, err = client.TenancyV1alpha1().Workspaces().Create(ctx, workspace, metav1.CreateOptions{})
 	if err != nil {
-		logger.Info(fmt.Sprintf("Failed to create WDS workspace root:%s", wdsName))
+		logger.Error(err, fmt.Sprintf("Failed to create WDS workspace root:%s", wdsName))
 		return err
 	}
 
@@ -156,7 +156,7 @@ func DeleteAPIBinding(client *kcpclientset.Clientset, ctx context.Context, logge
 		return err
 	} else if ! apierrors.IsNotFound(err) {
 		// Some error other than a non-existant APIBinding
-		logger.Info(fmt.Sprintf("Problem removing APIBinding %s", bindName))
+		logger.Error(err, fmt.Sprintf("Problem removing APIBinding %s", bindName))
 		return err
 	}
 	logger.Info(fmt.Sprintf("Verified no APIBinding %s", bindName))

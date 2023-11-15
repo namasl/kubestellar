@@ -29,44 +29,39 @@ import (
 )
 
 // Make sure user provided location name is valid
-func CheckLocationName(locationName string, logger klog.Logger) error {
+func CheckLocationName(locationName string) error {
 	// ensure characters are valid
 	matched, _ := regexp.MatchString(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`, locationName)
 	if !matched {
 		err := errors.New("Location name must match regex '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'")
-		logger.Error(err, fmt.Sprintf("Invalid location name %s", locationName))
 		return err
 	}
 	// check for reserved words
 	if locationName == "default" {
 		err := errors.New("Location name 'default' may not be used")
-		logger.Error(err, fmt.Sprintf("Invalid location name %s", locationName))
 		return err
 	}
 	return nil
 }
 
 // Verify that user provided key=value arguments are valid
-func CheckLabelArgs(labels []string, logger klog.Logger) error {
+func CheckLabelArgs(labels []string) error {
 	if len(labels) < 1 {
-		err := errors.New("No labels provided")
-		logger.Error(err, "At least one label must be provided")
+		err := errors.New("At least one label must be provided")
 		return err
 	}
 	// Iterate over labels
 	for _, labelString := range labels {
 		// Ensure the raw string contains a =
 		if !strings.Contains(labelString, "=") {
-			err := errors.New("Invalid label, missing '='")
-			logger.Error(err, fmt.Sprintf("Invalid label, must format as \"key=value\": %s", labelString))
+			err := fmt.Errorf("Invalid label %s, missing '='", labelString)
 			return err
 		}
 		// Split substring on =
 		labelSlice := strings.Split(labelString, "=")
 		// We should have only a key and value now
 		if len(labelSlice) != 2 {
-			err := errors.New("Invalid label, must exactly one '='")
-			logger.Error(err, fmt.Sprintf("Invalid label, must format as \"key=value\": %s", labelString))
+			err := fmt.Errorf("Invalid label %s, must use exactly one '='", labelString)
 			return err
 		}
 		key := labelSlice[0]
@@ -74,20 +69,17 @@ func CheckLabelArgs(labels []string, logger klog.Logger) error {
 		// Make sure the key and value contain only valid characters
 		matched, _ := regexp.MatchString(`^[a-zA-Z0-9][a-zA-Z0-9_./-]*$`, key)
 		if !matched {
-			err := errors.New("Key must match regex '^[a-zA-Z0-9][a-zA-Z0-9_./-]*$'")
-			logger.Error(err, fmt.Sprintf("Invalid key %s in label \"%s\"", key, labelString))
+			err := fmt.Errorf("Invalid label %s, key must match regex '^[a-zA-Z0-9][a-zA-Z0-9_./-]*$'", labelString)
 			return err
 		}
 		matched, _ = regexp.MatchString(`^[a-zA-Z0-9]([a-zA-Z0-9_.-]{0,61}[a-zA-Z0-9])?$`, value)
 		if !matched {
-			err := errors.New("Value must match regex '^[a-zA-Z0-9]([a-zA-Z0-9_.-]{0,61}[a-zA-Z0-9])?$'")
-			logger.Error(err, fmt.Sprintf("Invalid value %s in label \"%s\"", value, labelString))
+			err := fmt.Errorf("Invalid label %s, value must match regex '^[a-zA-Z0-9]([a-zA-Z0-9_.-]{0,61}[a-zA-Z0-9])?$'", labelString)
 			return err
 		}
 		// Make sure no invalid keys are passed
 		if key == "id" {
-			err := errors.New("Invalid key")
-			logger.Error(err, "Key 'id' is handled internally and may not be specified")
+			err := errors.New("Invalid key, 'id' is handled internally and may not be specified")
 			return err
 		}
 	}
@@ -110,7 +102,7 @@ func VerifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, 
 		return err
 	} else if ! apierrors.IsNotFound(err) {
 		// Some error other than a non-existant SyncTarget
-		logger.Info(fmt.Sprintf("Problem checking for SyncTarget %s in workspace root:%s", locationName, imw))
+		logger.Error(err, fmt.Sprintf("Problem checking for SyncTarget %s in workspace root:%s", locationName, imw))
 		return err
 	}
 	// SyncTarget does not exist, must create
@@ -136,7 +128,7 @@ func VerifyOrCreateSyncTarget(client *clientset.Clientset, ctx context.Context, 
 	}
 	_, err = client.EdgeV2alpha1().SyncTargets().Create(ctx, syncTarget, metav1.CreateOptions{})
 	if err != nil {
-		logger.Info(fmt.Sprintf("Failed to create SyncTarget %s in workspace root:%s", locationName, imw))
+		logger.Error(err, fmt.Sprintf("Failed to create SyncTarget %s in workspace root:%s", locationName, imw))
 		return err
 	}
 
@@ -165,7 +157,7 @@ func VerifySyncTargetId(syncTarget *v2alpha1.SyncTarget, client *clientset.Clien
 	// Apply updates to SyncTarget
 	_, err := client.EdgeV2alpha1().SyncTargets().Update(ctx, syncTarget, metav1.UpdateOptions{})
 	if err != nil {
-		logger.Info(fmt.Sprintf("Failed to update SyncTarget %s in workspace root:%s", locationName, imw))
+		logger.Error(err, fmt.Sprintf("Failed to update SyncTarget %s in workspace root:%s", locationName, imw))
 		return err
 	}
 
@@ -205,7 +197,7 @@ func VerifySyncTargetLabels(syncTarget *v2alpha1.SyncTarget, client *clientset.C
 		// Apply updates to SyncTarget
 		_, err := client.EdgeV2alpha1().SyncTargets().Update(ctx, syncTarget, metav1.UpdateOptions{})
 		if err != nil {
-			logger.Info(fmt.Sprintf("Failed to update SyncTarget %s in workspace root:%s", locationName, imw))
+			logger.Error(err, fmt.Sprintf("Failed to update SyncTarget %s in workspace root:%s", locationName, imw))
 			return err
 		}
 	}
@@ -223,7 +215,7 @@ func VerifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, lo
 		return err
 	} else if ! apierrors.IsNotFound(err) {
 		// Some error other than a non-existant SyncTarget
-		logger.Info(fmt.Sprintf("Problem checking for Location %s in workspace root:%s", locationName, imw))
+		logger.Error(err, fmt.Sprintf("Problem checking for Location %s in workspace root:%s", locationName, imw))
 		return err
 	}
 	// Location does not exist, must create
@@ -264,7 +256,7 @@ func VerifyOrCreateLocation(client *clientset.Clientset, ctx context.Context, lo
 	}
 	_, err = client.EdgeV2alpha1().Locations().Create(ctx, location, metav1.CreateOptions{})
 	if err != nil {
-		logger.Info(fmt.Sprintf("Failed to create Location %s in workspace root:%s", locationName, imw))
+		logger.Error(err, fmt.Sprintf("Failed to create Location %s in workspace root:%s", locationName, imw))
 		return err
 	}
 
@@ -304,7 +296,7 @@ func VerifyLocationLabels(location *v2alpha1.Location, client *clientset.Clients
 		// Apply updates to Location
 		_, err := client.EdgeV2alpha1().Locations().Update(ctx, location, metav1.UpdateOptions{})
 		if err != nil {
-			logger.Info(fmt.Sprintf("Failed to update Location %s in workspace root:%s", locationName, imw))
+			logger.Error(err, fmt.Sprintf("Failed to update Location %s in workspace root:%s", locationName, imw))
 			return err
 		}
 	}

@@ -38,7 +38,7 @@ func VerifyOrCreateAPIBinding(client *kcpclientset.Clientset, ctx context.Contex
 		return err
 	} else if ! apierrors.IsNotFound(err) {
 		// Some error other than a non-existant APIBinding
-		logger.Info(fmt.Sprintf("Problem checking for APIBinding %s", bindName))
+		logger.Error(err, fmt.Sprintf("Problem checking for APIBinding %s", bindName))
 		return err
 	}
 
