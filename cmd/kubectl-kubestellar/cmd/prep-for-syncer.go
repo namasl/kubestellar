@@ -37,14 +37,10 @@ import (
 	plugin "github.com/kubestellar/kubestellar/pkg/cliplugins/kubestellar/get-kubeconfig"
 )
 
-var imw string // IMW name
-var espw string // ESPW name
-var syncerImage string // Filename for syncer image
-
 // Create the Cobra sub-command for 'kubectl kubestellar prep-for-syncer'
 func newPrepForSyncer(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 	// Make prep-for-syncer command
-	cmdGetExternalKubeconfig := &cobra.Command{
+	cmdPrepForSyncer := &cobra.Command{
 		Use:     "prep-for-syncer --output <FILENAME> --syncer-image <CONTAINER_IMG> --imw <IMW_NAME> --espw <ESPW_NAME>",
 		Aliases: []string{"pfs"},
 		Short:   "Prepare mailbox workspace, output YAML for edge cluster",
@@ -55,15 +51,16 @@ func newPrepForSyncer(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 			// want the help to be displayed when the error is due to an
 			// invalid command.
 			cmd.SilenceUsage = true
-			err := getKubeconfig(cmd, cliOpts, args, false)
+			err := prepForSyncer(cmd, cliOpts, args, false)
 			return err
 		},
 	}
 
 	// Add required flag for output filename (--output or -o)
-	cmdGetExternalKubeconfig.Flags().StringVarP(&fname, "output", "o", "", "Output path/filename")
-	cmdGetExternalKubeconfig.MarkFlagRequired("output")
-	return cmdGetExternalKubeconfig
+	cmdPrepForSyncer.Flags().StringVarP(&fname, "output", "o", "", "Output path/filename")
+	cmdPrepForSyncer.MarkFlagRequired("output")
+	cmdPrepForSyncer.MarkFlagFilename("output")
+	return cmdPrepForSyncer
 }
 
 func init() {
@@ -87,14 +84,10 @@ func init() {
 	rootCmd.AddCommand(newGetInternalKubeconfig(cliOpts))
 }
 
-// Get KubeStellar kubeconfig, and write to output file (filename given by fname
-// variable, tied to --output flag).
+
 func prepForSyncer(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string, isInternal bool) error {
 	ctx := context.Background()
 	logger := klog.FromContext(ctx)
-	// Set context from KUBECONFIG to use in client
-	configContext := ksContext
-	cliOpts.Context = &configContext
 
 	// Print all flags and their values if verbosity level is at least 1
 	cmdGetKubeconfig.Flags().VisitAll(func(flg *pflag.Flag) {
@@ -114,38 +107,6 @@ func prepForSyncer(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 		logger.Error(err, "Failed create client-go instance")
 		return err
 	}
-
-	// Get name of KubeStellar server pod
-	serverPodName, err := plugin.GetServerPodName(client, ctx, ksNamespace, ksSelector)
-	if err != nil {
-		logger.Error(err, fmt.Sprintf("Problem finding server pod in namespace %s with selector %s", ksNamespace, ksSelector))
-		return err
-	}
-	logger.Info(fmt.Sprintf("Found KubeStellar server pod %s", serverPodName))
-
-	// Check if server pod is ready
-	err = plugin.KsPodIsReady(client, config, ksNamespace, serverPodName, "init")
-	if err != nil {
-		logger.Error(err, fmt.Sprintf("KubeStellar init container in pod %s is not ready", serverPodName))
-		return err
-	}
-	logger.Info(fmt.Sprintf("KubeStellar init container in pod %s is ready", serverPodName))
-
-	// Get KubeSteallar Kubeconfig
-	ksConfig, err := plugin.GetKSKubeconfig(client, ctx, ksNamespace, isInternal)
-	if err != nil {
-		logger.Error(err, "Problem obtaining kubeconfig")
-		return err
-	}
-	logger.V(1).Info(fmt.Sprintf("kubeconfig: %s", string(ksConfig)))
-
-	// Write to file
-	err = os.WriteFile(fname, ksConfig, 0644)
-	if err != nil {
-		logger.Error(err, fmt.Sprintf("Problem writing kubeconfig to output file %s", fname))
-		return err
-	}
-	logger.Info(fmt.Sprintf("Wrote kubeconfig to file %s", fname))
 
 	return nil
 }
