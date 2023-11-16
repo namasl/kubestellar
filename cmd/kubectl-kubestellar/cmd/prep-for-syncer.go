@@ -25,7 +25,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -33,8 +32,6 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
-
-	plugin "github.com/kubestellar/kubestellar/pkg/cliplugins/kubestellar/get-kubeconfig"
 )
 
 // Create the Cobra sub-command for 'kubectl kubestellar prep-for-syncer'
@@ -69,8 +66,8 @@ func init() {
 	// discovery client, and propagate them to the places that need them,
 	// rather than instantiating them multiple times."
 	cliOpts := genericclioptions.NewConfigFlags(true)
-	// Make a new flag set named getKubeconfig
-	fs := pflag.NewFlagSet("getKubeconfig", pflag.ExitOnError)
+	// Make a new flag set named prepForSyncer
+	fs := pflag.NewFlagSet("prepForSyncer", pflag.ExitOnError)
 	// Add cliOpts flags to fs (flow from syntax is confusing, goes -->)
 	cliOpts.AddFlags(fs)
 	// Add logging flags to fs
@@ -80,8 +77,7 @@ func init() {
 	rootCmd.PersistentFlags().AddFlagSet(fs)
 
 	// Add sub-commands
-	rootCmd.AddCommand(newGetExternalKubeconfig(cliOpts))
-	rootCmd.AddCommand(newGetInternalKubeconfig(cliOpts))
+	rootCmd.AddCommand(newPrepForSyncer(cliOpts))
 }
 
 
