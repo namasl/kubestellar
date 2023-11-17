@@ -57,7 +57,7 @@ func newPrepForSyncer(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 		},
 	}
 
-	// Add required flag for output filename (--output or -o)
+	// Add flags
 	cmdPrepForSyncer.Flags().StringVarP(&fname, "output", "o", "", "Output path/filename")
 	cmdPrepForSyncer.MarkFlagRequired("output")
 	cmdPrepForSyncer.MarkFlagFilename("output")
