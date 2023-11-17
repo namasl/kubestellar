@@ -29,9 +29,12 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	kcpclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
+
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
+
+//	plugin "github.com/kubestellar/kubestellar/pkg/cliplugins/kubestellar/prep-for-syncer"
 )
 
 var espw string // ESPW name, given by --espw flag
@@ -42,10 +45,10 @@ var syncerImageFname string // filename for syncer image, given by --syncer-imag
 func newPrepForSyncer(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 	// Make prep-for-syncer command
 	cmdPrepForSyncer := &cobra.Command{
-		Use:     "prep-for-syncer --output <FILENAME> --syncer-image <CONTAINER_IMG> --imw <IMW_NAME> --espw <ESPW_NAME>",
+		Use:     "prep-for-syncer <SYNC_TARGET_NAME> --syncer-image <CONTAINER_IMG> --imw <IMW_NAME> --espw <ESPW_NAME> [--output <FILENAME>]",
 		Aliases: []string{"pfs"},
 		Short:   "Prepare mailbox workspace, output YAML for edge cluster",
-		Args:    cobra.ExactArgs(0),
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// At this point set silence usage to true, so that any errors
 			// following do not result in the help being printed. We only
@@ -59,7 +62,6 @@ func newPrepForSyncer(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 
 	// Add flags
 	cmdPrepForSyncer.Flags().StringVarP(&fname, "output", "o", "", "Output path/filename")
-	cmdPrepForSyncer.MarkFlagRequired("output")
 	cmdPrepForSyncer.MarkFlagFilename("output")
 	cmdPrepForSyncer.Flags().StringVarP(&syncerImageFname, "syncer-image", "", "", "Syncer container image")
 	cmdPrepForSyncer.MarkFlagRequired("syncer-image")
@@ -95,11 +97,22 @@ func init() {
 func prepForSyncer(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.ConfigFlags, args []string, isInternal bool) error {
 	ctx := context.Background()
 	logger := klog.FromContext(ctx)
+	syncTargetName := args[0]
 
 	// Print all flags and their values if verbosity level is at least 1
 	cmdGetKubeconfig.Flags().VisitAll(func(flg *pflag.Flag) {
 		logger.V(1).Info(fmt.Sprintf("Command line flag %s=%s", flg.Name, flg.Value))
 	})
+
+	// --output flag is optional, make output filename if not provided
+	if fname == "" {
+		fname = syncTargetName + "-syncer.yaml"
+	}
+
+	// Set context to root
+	// We will append workspace names to the root server as needed
+	configContext := "root"
+	cliOpts.Context = &configContext
 
 	// Get client config from flags
 	config, err := cliOpts.ToRESTConfig()
@@ -108,14 +121,66 @@ func prepForSyncer(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 		return err
 	}
 
+	// Keep a copy of the root server URL
+	rootHost := config.Host
+
 	// Create client-go instance from config
-	client, err := kubernetes.NewForConfig(config)
+	rootClient, err := kcpclientset.NewForConfig(config)
 	if err != nil {
 		logger.Error(err, "Failed create client-go instance")
 		return err
 	}
 
-	fmt.Println(client)
+	// Update host to work on objects within IMW
+	config.Host = rootHost + ":" + imw
+	logger.V(1).Info(fmt.Sprintf("Set host to %s for IMW", config.Host))
+
+	// Create client-go instance from config
+	imwClient, err := kcpclientset.NewForConfig(config)
+	if err != nil {
+		logger.Error(err, "Failed create client-go instance")
+		return err
+	}
+
+	// Update host to work on objects within ESPW
+	config.Host = rootHost + ":" + espw
+	logger.V(1).Info(fmt.Sprintf("Set host to %s for ESPW", config.Host))
+
+	// Create client-go instance from config
+	espwClient, err := kcpclientset.NewForConfig(config)
+	if err != nil {
+		logger.Error(err, "Failed create client-go instance")
+		return err
+	}
+
+	// Get mailbox name from SyncTarget
+	// use imwClient
+	// KUBECONFIG=~/ks-core.kubeconfig kubectl get synctargets.edge.kubestellar.io ks-edge-cluster1 -o jsonpath="{.metadata.annotations['kcp\.io/cluster']}-mb-{.metadata.uid}"
+	// GET https://debian:1119/clusters/root:imw1/apis/edge.kubestellar.io/v2alpha1/synctargets/ks-edge-cluster1
+
+	// in ESPW, check for APIExport edge.kubestellar.io
+	// KUBECONFIG=~/ks-core.kubeconfig kubectl get APIExport edge.kubestellar.io
+	// GET https://debian:1119/clusters/root:espw/apis/apis.kcp.io/v1alpha1/apiexports/edge.kubestellar.io
+	// if that fails, warn that this is not the edge service provider workspace
+
+	// in root, get mailbox
+	// try, wait 15 seconds, try again, wait 15 seconds, try one last time
+	// KUBECONFIG=~/ks-core.kubeconfig kubectl get Workspace d53tneij4e1yah6z-mb-0073399f-e2d6-4b61-b684-dfea16ca5bfc
+	// GET https://debian:1119/clusters/root/apis/tenancy.kcp.io/v1alpha1/workspaces/d53tneij4e1yah6z-mb-0073399f-e2d6-4b61-b684-dfea16ca5bfc
+
+	// Now workspace exists, but is it ready, wait 5 seconds
+
+	// Work in mailbox workspace (make another client)
+
+	// Check for APIBinding bind-edge
+	// KUBECONFIG=~/ks-core.kubeconfig kubectl get APIBinding bind-edge
+	// GET https://debian:1119/clusters/root:d53tneij4e1yah6z-mb-0073399f-e2d6-4b61-b684-dfea16ca5bfc/apis/apis.kcp.io/v1alpha1/apibindings/bind-edge
+
+	// APIBinding exists, but has it taken effect? sleep 10
+
+
+	// kubectl-kubestellar-syncer_gen" "$stname" --syncer-image "$syncer_image" -o "$output"
+
 
 	return nil
 }
