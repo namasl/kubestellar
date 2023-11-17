@@ -34,6 +34,10 @@ import (
 	"k8s.io/klog/v2"
 )
 
+var espw string // ESPW name, given by --espw flag
+var imw string // IMW name, given by --imw flag
+var syncerImageFname string // filename for syncer image, given by --syncer-image flag
+
 // Create the Cobra sub-command for 'kubectl kubestellar prep-for-syncer'
 func newPrepForSyncer(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 	// Make prep-for-syncer command
@@ -57,6 +61,13 @@ func newPrepForSyncer(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 	cmdPrepForSyncer.Flags().StringVarP(&fname, "output", "o", "", "Output path/filename")
 	cmdPrepForSyncer.MarkFlagRequired("output")
 	cmdPrepForSyncer.MarkFlagFilename("output")
+	cmdPrepForSyncer.Flags().StringVarP(&syncerImageFname, "syncer-image", "", "", "Syncer container image")
+	cmdPrepForSyncer.MarkFlagRequired("syncer-image")
+	cmdPrepForSyncer.MarkFlagFilename("syncer-image")
+	cmdPrepForSyncer.Flags().StringVarP(&imw, "imw", "", "", "IMW name")
+	cmdPrepForSyncer.MarkFlagRequired("imw")
+	cmdPrepForSyncer.Flags().StringVarP(&espw, "espw", "", "", "ESPW name")
+	cmdPrepForSyncer.MarkFlagRequired("espw")
 	return cmdPrepForSyncer
 }
 
@@ -103,6 +114,8 @@ func prepForSyncer(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 		logger.Error(err, "Failed create client-go instance")
 		return err
 	}
+
+	fmt.Println(client)
 
 	return nil
 }
