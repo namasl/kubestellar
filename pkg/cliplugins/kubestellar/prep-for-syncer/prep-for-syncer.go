@@ -89,3 +89,18 @@ func CheckMailboxExists(client *kcpclientset.Clientset, ctx context.Context, mbN
 	// It has been 3 iterations, return whatever result we got regardless of error
 	return exists, err
 }
+
+// Check if an APIBinding exists, create if not
+func CheckAPIBindingExists(client *kcpclientset.Clientset, ctx context.Context, bindName string) (bool, error) {
+	// Get the APIBinding
+	_, err := client.ApisV1alpha1().APIBindings().Get(ctx, bindName, metav1.GetOptions{})
+	if err == nil {
+		// APIBinding exists
+		return true, nil
+	} else if apierrors.IsNotFound(err) {
+		// No APIBinding
+		return false, nil
+	}
+	// Some error other than a non-existant APIBinding
+	return false, err
+}

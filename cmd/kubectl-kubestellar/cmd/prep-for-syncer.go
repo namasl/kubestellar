@@ -25,6 +25,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -41,6 +42,7 @@ import (
 var espw string // ESPW name, given by --espw flag
 var imw string // IMW name, given by --imw flag
 var syncerImageFname string // filename for syncer image, given by --syncer-image flag
+var fast bool // Indicates if we should skip waiting periods, given by --fast flag
 
 // Create the Cobra sub-command for 'kubectl kubestellar prep-for-syncer'
 func newPrepForSyncer(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
@@ -71,6 +73,7 @@ func newPrepForSyncer(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 	cmdPrepForSyncer.MarkFlagRequired("imw")
 	cmdPrepForSyncer.Flags().StringVarP(&espw, "espw", "", "", "ESPW name")
 	cmdPrepForSyncer.MarkFlagRequired("espw")
+	cmdPrepForSyncer.Flags().BoolVar(&fast, "fast", false, "Skip waiting periods")
 	return cmdPrepForSyncer
 }
 
@@ -187,18 +190,43 @@ func prepForSyncer(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 	}
 	logger.Info(fmt.Sprintf("Found mailbox %s", mbName))
 
-	// Now workspace exists, but is it ready, wait 5 seconds
+	if !fast {
+		// Wait 5 seconds after finding mailbox to give some buffer in hope it is ready
+		logger.Info("Wait 5 seconds")
+		time.Sleep(time.Second * 5)
+	}
 
-	// Work in mailbox workspace (make another client)
+	// Set host to work on objects within mailbox workspace
+	config.Host = rootHost + ":" + mbName
+	logger.V(1).Info(fmt.Sprintf("Set host to %s for mailbox workspace", config.Host))
 
-	// Check for APIBinding bind-edge
-	// KUBECONFIG=~/ks-core.kubeconfig kubectl get APIBinding bind-edge
-	// GET https://debian:1119/clusters/root:d53tneij4e1yah6z-mb-0073399f-e2d6-4b61-b684-dfea16ca5bfc/apis/apis.kcp.io/v1alpha1/apibindings/bind-edge
+	// Create client-go instance from config
+	mbClient, err := kcpclientset.NewForConfig(config)
+	if err != nil {
+		logger.Error(err, "Failed create client-go instance")
+		return err
+	}
 
-	// APIBinding exists, but has it taken effect? sleep 10
+	// Check for APIBinding bind-edge in mailbox workspace
+	exists, err = plugin.CheckAPIBindingExists(mbClient, ctx, "bind-edge")
+	if err != nil {
+		logger.Error(err, fmt.Sprintf("Problem checking for APIBinding bind-edge in mailbox workspace %s", mbName))
+		return err
+	}
+	if !exists {
+		logger.Error(err, fmt.Sprintf("APIBinding bind-edge does not exist in mailbox workspace %s; is this the right workspace?", mbName))
+		return err
+	}
+	logger.Info(fmt.Sprintf("Found APIBinding bind-edge in mailbox workspace %s", mbName))
 
+	if !fast {
+		// Wait 10 seconds after finding APIBinding to give some buffer to ensure it has taken effect
+		logger.Info("Wait 10 seconds")
+		time.Sleep(time.Second * 10)
+	}
 
 	// kubectl-kubestellar-syncer_gen" "$stname" --syncer-image "$syncer_image" -o "$output"
+	// kubectl-kubestellar-syncer_gen" syncTargetName --syncer-image syncerImageName -o fname
 
 
 	return nil
