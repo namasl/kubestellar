@@ -34,7 +34,8 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/klog/v2"
 
-//	plugin "github.com/kubestellar/kubestellar/pkg/cliplugins/kubestellar/prep-for-syncer"
+	ksclientset "github.com/kubestellar/kubestellar/pkg/client/clientset/versioned"
+	plugin "github.com/kubestellar/kubestellar/pkg/cliplugins/kubestellar/prep-for-syncer"
 )
 
 var espw string // ESPW name, given by --espw flag
@@ -136,7 +137,7 @@ func prepForSyncer(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 	logger.V(1).Info(fmt.Sprintf("Set host to %s for IMW", config.Host))
 
 	// Create client-go instance from config
-	imwClient, err := kcpclientset.NewForConfig(config)
+	imwClient, err := ksclientset.NewForConfig(config)
 	if err != nil {
 		logger.Error(err, "Failed create client-go instance")
 		return err
@@ -153,10 +154,15 @@ func prepForSyncer(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 		return err
 	}
 
+	fmt.Println(rootClient, espwClient)
+	fmt.Println("----------------")
+
 	// Get mailbox name from SyncTarget
 	// use imwClient
 	// KUBECONFIG=~/ks-core.kubeconfig kubectl get synctargets.edge.kubestellar.io ks-edge-cluster1 -o jsonpath="{.metadata.annotations['kcp\.io/cluster']}-mb-{.metadata.uid}"
 	// GET https://debian:1119/clusters/root:imw1/apis/edge.kubestellar.io/v2alpha1/synctargets/ks-edge-cluster1
+
+	plugin.GetMailboxName(imwClient, ctx, syncTargetName)
 
 	// in ESPW, check for APIExport edge.kubestellar.io
 	// KUBECONFIG=~/ks-core.kubeconfig kubectl get APIExport edge.kubestellar.io
