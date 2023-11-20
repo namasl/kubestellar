@@ -154,25 +154,38 @@ func prepForSyncer(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 		return err
 	}
 
-	fmt.Println(rootClient, espwClient)
-	fmt.Println("----------------")
 
-	// Get mailbox name from SyncTarget
-	// use imwClient
-	// KUBECONFIG=~/ks-core.kubeconfig kubectl get synctargets.edge.kubestellar.io ks-edge-cluster1 -o jsonpath="{.metadata.annotations['kcp\.io/cluster']}-mb-{.metadata.uid}"
-	// GET https://debian:1119/clusters/root:imw1/apis/edge.kubestellar.io/v2alpha1/synctargets/ks-edge-cluster1
+	// Get mailbox name from named SyncTarget
+	mbName, err := plugin.GetMailboxName(imwClient, ctx, syncTargetName)
+	if err != nil {
+		logger.Error(err, fmt.Sprintf("Problem getting mailbox name for SyncTarget %s", syncTargetName))
+		return err
+	}
+	logger.Info(fmt.Sprintf("Mailbox name is %s for SyncTarget %s", mbName, syncTargetName))
 
-	plugin.GetMailboxName(imwClient, ctx, syncTargetName)
+	// Verify that APIExport edge.kubestellar.io exists in ESPW
+	exists, err := plugin.CheckAPIExportExists(espwClient, ctx, "edge.kubestellar.io")
+	if err != nil {
+		logger.Error(err, fmt.Sprintf("Problem checking for APIExport edge.kubestellar.io in ESPW %s", espw))
+		return err
+	}
+	if !exists {
+		logger.Error(err, fmt.Sprintf("APIExport edge.kubestellar.io does not exist in ESPW %s; is this the right workspace?", espw))
+		return err
+	}
+	logger.Info(fmt.Sprintf("Found APIExport edge.kubestellar.io in ESPW %s", espw))
 
-	// in ESPW, check for APIExport edge.kubestellar.io
-	// KUBECONFIG=~/ks-core.kubeconfig kubectl get APIExport edge.kubestellar.io
-	// GET https://debian:1119/clusters/root:espw/apis/apis.kcp.io/v1alpha1/apiexports/edge.kubestellar.io
-	// if that fails, warn that this is not the edge service provider workspace
-
-	// in root, get mailbox
-	// try, wait 15 seconds, try again, wait 15 seconds, try one last time
-	// KUBECONFIG=~/ks-core.kubeconfig kubectl get Workspace d53tneij4e1yah6z-mb-0073399f-e2d6-4b61-b684-dfea16ca5bfc
-	// GET https://debian:1119/clusters/root/apis/tenancy.kcp.io/v1alpha1/workspaces/d53tneij4e1yah6z-mb-0073399f-e2d6-4b61-b684-dfea16ca5bfc
+	// Verify we can get the mailbox workspace
+	exists, err = plugin.CheckMailboxExists(rootClient, ctx, mbName)
+	if err != nil {
+		logger.Error(err, fmt.Sprintf("Problem checking for mailbox %s", mbName))
+		return err
+	}
+	if !exists {
+		logger.Error(err, fmt.Sprintf("Could not find mailbox %s; is the mailbox controller running?", mbName))
+		return err
+	}
+	logger.Info(fmt.Sprintf("Found mailbox %s", mbName))
 
 	// Now workspace exists, but is it ready, wait 5 seconds
 

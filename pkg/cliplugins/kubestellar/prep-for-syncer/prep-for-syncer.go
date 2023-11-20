@@ -18,29 +18,74 @@ package plugin
 
 import (
 	"context"
-	"fmt"
-	//"io"
-	//"os"
+	"time"
 
-	//corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	//"k8s.io/client-go/kubernetes"
-	//"k8s.io/client-go/kubernetes/scheme"
-	//"k8s.io/client-go/rest"
-	//"k8s.io/client-go/tools/remotecommand"
+
+	kcpclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
 
 	ksclientset "github.com/kubestellar/kubestellar/pkg/client/clientset/versioned"
 )
 
-
+// Get the mailbox name for a given SyncTarget name
 func GetMailboxName(client *ksclientset.Clientset, ctx context.Context, syncTargetName string) (string, error) {
-	// Delete the SyncTarget
+	// Get the SyncTarget
 	syncTarget, err := client.EdgeV2alpha1().SyncTargets().Get(ctx, syncTargetName, metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}
 
-	fmt.Println(syncTarget)
+	// Mailbox name is CLUSTER_NAME + "-mb-" + UID
+	mbClusterName := syncTarget.ObjectMeta.Annotations["kcp.io/cluster"]
+	mbUID := string(syncTarget.ObjectMeta.UID)
+	mbName := mbClusterName + "-mb-" + mbUID
 
-	return "", nil
+	return mbName, nil
+}
+
+// Check if APIExport exists, returning a boolean for state
+func CheckAPIExportExists(client *kcpclientset.Clientset, ctx context.Context, apiExportName string) (bool, error) {
+	_, err := client.ApisV1alpha1().APIExports().Get(ctx, apiExportName, metav1.GetOptions{})
+	if err == nil {
+		// APIExport exists
+		return true, nil
+	} else if apierrors.IsNotFound(err) {
+		// No APIExport
+		return false, nil
+	}
+	// Some error other than a non-existant APIExport
+	return false, err
+}
+
+// Check that Workspace exists, returning a boolean for state
+func CheckWorkspaceExists(client *kcpclientset.Clientset, ctx context.Context, wsName string) (bool, error) {
+	_, err := client.TenancyV1alpha1().Workspaces().Get(ctx, wsName, metav1.GetOptions{})
+	if err == nil {
+		// Workspace exists
+		return true, nil
+	} else if apierrors.IsNotFound(err) {
+		// No Workspace
+		return false, nil
+	}
+	// Some error other than a non-existant Workspace
+	return false, err
+}
+
+// Check if mailbox exists, returning a boolean for state.
+// We will give 3 chances to find the mailbox workspace, with 15 second waits between.
+func CheckMailboxExists(client *kcpclientset.Clientset, ctx context.Context, mbName string) (bool, error) {
+	exists, err := CheckWorkspaceExists(client, ctx, mbName)
+	iter := 1
+	for iter < 3 {
+		if err == nil {
+			// Got a result without error, return it
+			return exists, err
+		}
+		time.Sleep(time.Second * 15)
+		exists, err = CheckMailboxExists(client, ctx, mbName)
+		iter += 1
+	}
+	// It has been 3 iterations, return whatever result we got regardless of error
+	return exists, err
 }
