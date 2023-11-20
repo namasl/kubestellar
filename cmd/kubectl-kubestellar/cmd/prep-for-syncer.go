@@ -25,6 +25,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -37,11 +38,12 @@ import (
 
 	ksclientset "github.com/kubestellar/kubestellar/pkg/client/clientset/versioned"
 	plugin "github.com/kubestellar/kubestellar/pkg/cliplugins/kubestellar/prep-for-syncer"
+	syncergen "github.com/kubestellar/kubestellar/pkg/cliplugins/kubestellar/syncer-gen"
 )
 
 var espw string // ESPW name, given by --espw flag
 var imw string // IMW name, given by --imw flag
-var syncerImageFname string // filename for syncer image, given by --syncer-image flag
+var syncerImageName string // Syncer image name, given by --syncer-image flag
 var fast bool // Indicates if we should skip waiting periods, given by --fast flag
 
 // Create the Cobra sub-command for 'kubectl kubestellar prep-for-syncer'
@@ -66,7 +68,7 @@ func newPrepForSyncer(cliOpts *genericclioptions.ConfigFlags) *cobra.Command {
 	// Add flags
 	cmdPrepForSyncer.Flags().StringVarP(&fname, "output", "o", "", "Output path/filename")
 	cmdPrepForSyncer.MarkFlagFilename("output")
-	cmdPrepForSyncer.Flags().StringVarP(&syncerImageFname, "syncer-image", "", "", "Syncer container image")
+	cmdPrepForSyncer.Flags().StringVarP(&syncerImageName, "syncer-image", "", "", "Syncer container image")
 	cmdPrepForSyncer.MarkFlagRequired("syncer-image")
 	cmdPrepForSyncer.MarkFlagFilename("syncer-image")
 	cmdPrepForSyncer.Flags().StringVarP(&imw, "imw", "", "", "IMW name")
@@ -225,9 +227,28 @@ func prepForSyncer(cmdGetKubeconfig *cobra.Command, cliOpts *genericclioptions.C
 		time.Sleep(time.Second * 10)
 	}
 
-	// kubectl-kubestellar-syncer_gen" "$stname" --syncer-image "$syncer_image" -o "$output"
-	// kubectl-kubestellar-syncer_gen" syncTargetName --syncer-image syncerImageName -o fname
 
+	// Run syncer-gen to generate YAML manifest
+	syncerGenOptions := syncergen.NewEdgeSyncOptions(genericclioptions.IOStreams{In: os.Stdin, Out: os.Stdout, ErrOut: os.Stderr})
+
+	syncerGenOptions.SyncerImage = syncerImageName
+	syncerGenOptions.OutputFile = fname
+
+	err = syncerGenOptions.Complete([]string{syncTargetName})
+	if err != nil {
+		logger.Error(err, "Problem with syncer-gen")
+		return err
+	}
+	err = syncerGenOptions.Validate()
+	if err != nil {
+		logger.Error(err, "Problem with syncer-gen")
+		return err
+	}
+	err = syncerGenOptions.Run(ctx)
+	if err != nil {
+		logger.Error(err, "Problem with syncer-gen")
+		return err
+	}
 
 	return nil
 }
