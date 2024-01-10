@@ -30,7 +30,7 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/klog/v2"
 
-	//"github.com/kubestellar/kubestellar/cmd/kubectl-kubestellar/cmd/ensure"
+	"github.com/kubestellar/kubestellar/cmd/kubectl-kubestellar/cmd/ensure"
 	"github.com/kubestellar/kubestellar/cmd/kubectl-kubestellar/cmd/remove"
 )
 
@@ -103,7 +103,7 @@ func init() {
 	rootCmd.PersistentFlags().AddFlagSet(fs)
 
 	// Add sub-commands
-	//rootCmd.AddCommand(ensure.EnsureCmd)
+	rootCmd.AddCommand(ensure.EnsureCmd)
 	rootCmd.AddCommand(remove.RemoveCmd)
 	rootCmd.AddCommand(completionCmd)
 }

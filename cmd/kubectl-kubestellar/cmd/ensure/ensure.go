@@ -64,6 +64,6 @@ func init() {
 
 	// Add sub-commands
 	//EnsureCmd.AddCommand(newCmdEnsureInventorySpace(cliOpts))
-	//EnsureCmd.AddCommand(newCmdEnsureLocation(cliOpts))
+	EnsureCmd.AddCommand(newCmdEnsureLocation(cliOpts))
 	//EnsureCmd.AddCommand(newCmdEnsureWds(cliOpts))
 }
